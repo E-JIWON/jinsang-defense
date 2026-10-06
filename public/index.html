@@ -385,7 +385,8 @@ function custBar(c, anger, sub, clock) {
 }
 function bubbles(msgs, animKey) {
   return msgs.map((m, i) => {
-    if (m.f === "p") return h("div", { className: "msg p" }, h("div", { className: "bubble", textContent: m.t }),
+    if (m.f === "p") return h("div", { className: "msg p" }, h("div", { className: "bubble", textContent: m.t, style: m.failed ? "opacity:.6" : "" }),
+      m.failed ? h("div", { className: "meta" }, h("span", { className: "grade bad", textContent: "전송 실패" }), animKey && g.turn?.player === me ? h("button", { className: "btn primary on", style: "height:28px;padding:0 10px;font-size:12px", textContent: "다시 보내기", onclick: () => act("retry") }) : null) :
       m.g != null ? h("div", { className: "meta" }, h("span", { className: "grade" + (m.g >= 12 ? " good" : m.g <= 6 ? " bad" : ""), textContent: `+${m.g}${m.why ? " · " + m.why : ""}` })) : null);
     const bubble = h("div", { className: "bubble" });
     const meta = (m.act || m.thought) ? h("div", { className: "meta" },

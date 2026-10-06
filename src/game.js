@@ -82,7 +82,7 @@ export function toCustomer(out) {
 // 손님 대답을 차례에 반영. 끝날 조건이면 이유를 돌려준다
 export function applyReply(t, out, now = Date.now()) {
   const grade = clamp(Math.round(Number(out.grade)) || 0, 0, 20);
-  const pm = t.msgs.at(-1); pm.g = grade; pm.why = str(out.why, 12);
+  const pm = t.msgs.at(-1); pm.g = grade; pm.why = str(out.why, 12); delete pm.failed;
   t.points = (t.points || 0) + grade;
   t.anger = clamp(Number.isFinite(Number(out.anger)) ? Math.round(Number(out.anger)) : t.anger, 0, 100);
   t.msgs.push({ f: "c", t: str(out.reply) || "…", act: str(out.act, 120), thought: str(out.thought, 120) });

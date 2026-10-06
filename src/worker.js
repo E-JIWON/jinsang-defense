@@ -20,22 +20,28 @@ export default {
 async function ask(env, kind, prompt, turn) {
   const local = /localhost|127\.0\.0\.1|trycloudflare|ngrok/.test(env.LLM_BASE_URL || "");
   if (!env.LLM_API_KEY && !local) return fakeAnswer(kind, turn);
-  // 분당 한도(429)·붐빔(503)·시간초과면 다음 모델로. 한 번에 25초 넘으면 포기
+  // 분당 한도(429)·구글 서버 붐빔(503)·시간초과면 다음 모델로, 한 바퀴 돌면 1.5초 쉬고 한 바퀴 더. 전체 30초까지
   const models = [env.LLM_MODEL, ...String(env.LLM_FALLBACK_MODELS || "").split(",")].map((m) => m.trim()).filter(Boolean);
-  let res, body = "";
-  for (const model of models) {
-    res = await fetch(env.LLM_BASE_URL.replace(/\/$/, "") + "/chat/completions", {
-      method: "POST",
-      headers: { "content-type": "application/json", authorization: `Bearer ${env.LLM_API_KEY || "local"}` },
-      body: JSON.stringify({ model, messages: [{ role: "user", content: prompt }], response_format: { type: "json_object" }, temperature: 0.7, ...(env.LLM_REASONING ? { reasoning_effort: env.LLM_REASONING } : {}) }),
-      signal: AbortSignal.timeout(25000),
-    }).catch((e) => ({ ok: false, status: e.name === "TimeoutError" ? 504 : 502 }));
-    if (![429, 503, 504].includes(res.status)) break;
-    body = res.text ? await res.text().catch(() => "") : "";
+  const deadline = Date.now() + 30000;
+  let res = { ok: false, status: 504 }, body = "";
+  tries: for (let pass = 0; pass < 2; pass++) {
+    if (pass) await new Promise((r) => setTimeout(r, 1500));
+    for (const model of models) {
+      const left = deadline - Date.now();
+      if (left < 2000) break tries;
+      res = await fetch(env.LLM_BASE_URL.replace(/\/$/, "") + "/chat/completions", {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${env.LLM_API_KEY || "local"}` },
+        body: JSON.stringify({ model, messages: [{ role: "user", content: prompt }], response_format: { type: "json_object" }, temperature: 0.7, ...(env.LLM_REASONING ? { reasoning_effort: env.LLM_REASONING } : {}) }),
+        signal: AbortSignal.timeout(Math.min(15000, left)),
+      }).catch((e) => ({ ok: false, status: e.name === "TimeoutError" ? 504 : 502 }));
+      if (![429, 503, 504].includes(res.status)) break tries;
+      body = res.text ? await res.text().catch(() => "") : "";
+    }
   }
   if (!res.ok) throw new Error(res.status === 429
     ? (/PerDay/i.test(body) ? "오늘 무료 AI 한도를 다 썼어요. 내일 다시 놀아요." : "AI가 잠깐 숨 고르는 중이에요(무료 분당 한도). 10초쯤 뒤 다시 보내 주세요.")
-    : res.status === 503 || res.status === 504 ? "AI가 지금 붐벼요. 잠시 뒤 다시 보내 주세요." : `AI 오류 ${res.status}`);
+    : res.status === 503 || res.status === 504 ? "구글 AI 서버가 잠깐 붐벼요(게임 문제는 아니에요). 다시 보내기를 눌러 주세요." : `AI 오류 ${res.status}`);
   const j = await res.json();
   return parseJson(j.choices?.[0]?.message?.content);
 }
@@ -106,17 +112,21 @@ export class Room extends DurableObject {
         await this.ctx.storage.setAlarm(now + TURN_MS);
         return this.save();
       }
-      case "say": {
-        const text = String(m.text || "").trim().slice(0, 200);
-        if (!text || t?.status !== "live" || t.player !== me || t.thinking) return;
+      case "say":
+      case "retry": {
+        if (t?.status !== "live" || t.player !== me || t.thinking) return;
+        const failed = t.msgs.at(-1)?.failed ? t.msgs.at(-1) : null;
+        const text = m.type === "retry" ? failed?.t : String(m.text || "").trim().slice(0, 200);
+        if (!text) return;
         const now = Date.now();
+        if (failed) t.msgs.pop(); // 실패한 말은 새 말(또는 같은 말 재전송)로 바꿔 끼운다
         t.msgs.push({ f: "p", t: text });
         t.clock = { spent: t.clock.spent + (now - t.clock.resumeAt), resumeAt: null }; // 손님이 생각하는 동안 시계 멈춤
         t.thinking = true; t.lastError = null;
         await this.ctx.storage.deleteAlarm(); await this.save();
         let end = null;
         try { end = applyReply(t, await ask(this.env, "reply", replyPrompt(g.customer, t), t)); }
-        catch (e) { t.msgs.pop(); t.thinking = false; t.clock.resumeAt = Date.now(); t.lastError = "손님이 대답을 못 했어요. 다시 보내 주세요. " + e.message; }
+        catch (e) { t.msgs.at(-1).failed = true; t.thinking = false; t.clock.resumeAt = Date.now(); t.lastError = "손님이 대답을 못 했어요. " + e.message; }
         if (g.turn !== t || t.status !== "live") return this.save(); // 그 사이 진행자가 끝냈으면 그대로
         if (end) endTurn(g, end); else await this.ctx.storage.setAlarm(Date.now() + remaining(t));
         return this.save();
