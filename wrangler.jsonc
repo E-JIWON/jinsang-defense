@@ -15,7 +15,7 @@
   "vars": {
     "LLM_BASE_URL": "https://generativelanguage.googleapis.com/v1beta/openai",
     "LLM_MODEL": "gemini-3.5-flash",
-    // 혼잡(503)·한도(429)일 때 한 번 더 시도할 모델. 비우면 재시도 안 함
-    "LLM_FALLBACK_MODEL": "gemini-flash-lite-latest"
+    // 생각(추론) 끄기: 8초 → 3초. Ollama 등 지원 안 하는 곳이면 빈 문자열로
+    "LLM_REASONING": "none"
   }
 }

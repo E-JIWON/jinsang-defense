@@ -476,7 +476,8 @@ function nowView() {
   if (v === "customer" || v === "reviewing" || !g.customer) return [h("div", { className: "card" },
     h("h2", { textContent: v === "reviewing" ? "손님이 리뷰를 쓰는 중…" : "딸랑, 손님이 들어오는 중…" }),
     h("div", { className: "skel" }, h("i", { style: "width:70%" }), h("i", { style: "width:90%" }), h("i", { style: "width:55%" })),
-    h("p", { className: "tiny", textContent: "보통 몇 초 걸려요." }))];
+    h("p", { className: "tiny", textContent: "보통 3~10초 걸려요." }),
+    isHost() ? h("button", { className: "btn text", style: "justify-self:start", textContent: "너무 오래 걸리면 다시 시도", onclick: () => act(v === "reviewing" ? "review" : "newCustomer", { idea: customIdea }) }) : null)];
 
   const c = g.customer, t = g.turn, live = t?.status === "live";
   const rs = g.roundResults || [], cur = current();

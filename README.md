@@ -31,6 +31,6 @@ OpenAI 호환 `/chat/completions`면 아무거나 된다. `wrangler.jsonc`의 `v
 
 | 쓰는 것 | LLM_BASE_URL | LLM_MODEL |
 |---|---|---|
-| Gemini (기본, 무료 한도) | `https://generativelanguage.googleapis.com/v1beta/openai` | `gemini-3.5-flash` (붐비면 `LLM_FALLBACK_MODEL`로 한 번 더) |
+| Gemini (기본, 무료 한도) | `https://generativelanguage.googleapis.com/v1beta/openai` | `gemini-3.5-flash` (`LLM_REASONING: none`으로 생각 끄면 3초) |
 | Groq (무료 한도) | `https://api.groq.com/openai/v1` | Groq 콘솔의 모델 이름 |
 | 내 맥 Ollama | Cloudflare Tunnel 주소 + `/v1` | `exaone3.5:7.8b` 등 |

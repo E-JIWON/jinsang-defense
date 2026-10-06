@@ -20,18 +20,19 @@ export default {
 async function ask(env, kind, prompt, turn) {
   const local = /localhost|127\.0\.0\.1|trycloudflare|ngrok/.test(env.LLM_BASE_URL || "");
   if (!env.LLM_API_KEY && !local) return fakeAnswer(kind, turn);
-  const models = [env.LLM_MODEL, env.LLM_FALLBACK_MODEL].filter(Boolean);
+  // 붐빔(503)·한도(429)면 1초 쉬고 같은 모델로 한 번 더. 한 번에 25초 넘으면 포기
   let res;
-  for (const model of models) {
+  for (const model of [env.LLM_MODEL, env.LLM_MODEL]) {
     res = await fetch(env.LLM_BASE_URL.replace(/\/$/, "") + "/chat/completions", {
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bearer ${env.LLM_API_KEY || "local"}` },
-      body: JSON.stringify({ model, messages: [{ role: "user", content: prompt }], response_format: { type: "json_object" }, temperature: 0.9 }),
-      signal: AbortSignal.timeout(60000),
-    });
-    if (res.status !== 429 && res.status !== 503) break; // 혼잡·한도면 다음 모델로
+      body: JSON.stringify({ model, messages: [{ role: "user", content: prompt }], response_format: { type: "json_object" }, temperature: 0.9, ...(env.LLM_REASONING ? { reasoning_effort: env.LLM_REASONING } : {}) }),
+      signal: AbortSignal.timeout(25000),
+    }).catch((e) => ({ ok: false, status: e.name === "TimeoutError" ? 504 : 502 }));
+    if (![429, 503, 504].includes(res.status)) break;
+    await new Promise((r) => setTimeout(r, 1000));
   }
-  if (!res.ok) throw new Error(res.status === 429 ? "오늘 무료 AI 한도를 다 썼어요." : res.status === 503 ? "AI가 지금 붐벼요. 잠시 뒤 다시 해 주세요." : `AI 오류 ${res.status}`);
+  if (!res.ok) throw new Error(res.status === 429 ? "오늘 무료 AI 한도를 다 썼어요." : res.status === 503 || res.status === 504 ? "AI가 지금 붐벼요. 잠시 뒤 다시 해 주세요." : `AI 오류 ${res.status}`);
   const j = await res.json();
   return parseJson(j.choices?.[0]?.message?.content);
 }
@@ -83,10 +84,11 @@ export class Room extends DurableObject {
         return;
       }
       case "newCustomer": {
-        if (!host || this.busy || !(g.phase === "lobby" || g.phase === "review" || (g.phase === "playing" && !cur && t?.status !== "live"))) return;
+        const stuck = g.phase === "customer" && !this.busy; // 손님 부르다 서버가 재시작된 경우
+        if (!host || this.busy || !(stuck || g.phase === "lobby" || g.phase === "review" || (g.phase === "playing" && !cur && t?.status !== "live"))) return;
         const order = Object.entries(g.players).filter(([, p]) => p.staff).sort((a, b) => a[1].joinedAt - b[1].joinedAt).map(([id]) => id);
         if (!order.length) return this.fail(ws, "직원으로 참가한 사람이 없어요.");
-        const back = g.phase; this.busy = true; g.phase = "customer"; g.lastError = null; await this.save();
+        const back = stuck ? (g.round ? "review" : "lobby") : g.phase; this.busy = true; g.phase = "customer"; g.lastError = null; await this.save();
         try {
           const c = toCustomer(await ask(this.env, "customer", customerPrompt(String(m.idea || "").slice(0, 60))));
           Object.assign(g, { phase: "playing", round: g.round + 1, customer: c, order, turnIdx: 0, turn: null, roundResults: [], review: null });
@@ -119,7 +121,7 @@ export class Room extends DurableObject {
       case "endTurn": if (t?.status === "live" && (t.player === me || host)) { await this.ctx.storage.deleteAlarm(); endTurn(g, "time"); return this.save(); } return;
       case "skip": if (host && g.phase === "playing" && cur && t?.status !== "live") { skipTurn(g); return this.save(); } return;
       case "review": {
-        if (!host || this.busy || g.phase !== "playing" || cur || !g.roundResults.length) return;
+        if (!host || this.busy || !(g.phase === "playing" || g.phase === "reviewing") || cur || !g.roundResults.length) return;
         this.busy = true; g.phase = "reviewing"; await this.save();
         try { g.review = toReview(await ask(this.env, "review", reviewPrompt(g.customer, g.roundResults)), g.roundResults); }
         catch { g.review = { headline: "손님이 리뷰를 안 남기고 떠났다.", items: [] }; }
