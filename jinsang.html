@@ -1,0 +1,780 @@
+<title>진상 손님 버티기</title>
+<style>
+/* layout: 상단 탭(지금 가게·지난 손님·순위) / 손님 바(위 고정) + 대화방 한 줄기 + 입력 도크(아래 고정)
+   tokens: bongchil-design-system 이식 */
+:root {
+  --surface: #ffffff; --surface-warm: #fafaf8; --surface-subtle: #f5f4f0;
+  --ink: #141210; --ink-2: #3b3730; --ink-3: #6b6558; --ink-4: #9c9588; --ink-5: #c8c2b6;
+  --primary: #5a8268; --primary-subtle: rgba(90,130,104,.08); --primary-light: #e3efe7;
+  --secondary: #b5612a; --danger: #c2607a; --sand: #c8a050; --sky: #50aac8;
+  --border: rgba(20,18,16,.07); --border-strong: rgba(20,18,16,.12);
+  --radius-s: 6px; --radius-m: 10px; --radius-l: 16px;
+  --shadow-ink: 60 55 45;
+  --shadow-s: 0 1px 3px rgba(20,18,16,.04); --shadow-m: 0 4px 16px rgba(20,18,16,.06); --shadow-l: 0 16px 48px rgba(20,18,16,.1);
+  --accent-rgb: 90 130 104;
+  --desk-glow: rgb(var(--accent-rgb) / .25);
+  --desk-bg: radial-gradient(1100px 620px at 16% 8%, var(--desk-glow), transparent 68%), linear-gradient(160deg, #f7f5f0, #efe9df);
+  --desk: #eae7df;
+  --glass-mix: 84%;
+  --aura-tint: #ffffff; --aura-text: #241e18; --grain-opacity: .5;
+  --aura-idle-tint: #ffffff; --aura-idle-mix: 34%; --aura-idle-shadow: rgb(60 55 45 / .06); --aura-idle-ring: transparent;
+  --aura-glow: 40%;
+  --font: "Pretendard", "Pretendard Variable", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Spoqa Han Sans Neo", "Malgun Gothic", system-ui, sans-serif;
+  --serif: "Nanum Myeongjo", "AppleMyungjo", "Batang", serif;
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+/* 라이트 고정 (요청) */
+:root { color-scheme: light }
+* { box-sizing: border-box }
+[hidden] { display: none !important }
+html, body { min-height: 100% }
+body { background: var(--desk); background-image: var(--desk-bg); background-attachment: fixed; color: var(--ink); font: 15px/1.6 var(--font); letter-spacing: -0.01em; padding: 0 16px 56px; -webkit-font-smoothing: antialiased }
+.app { max-width: 1024px; margin: 0 auto; display: grid; gap: 20px }
+
+/* ── 상단 바 ── */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; padding-block: 14px; }
+.top::before { content: ""; position: absolute; inset: 0 -16px; background: color-mix(in srgb, var(--desk) 70%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); z-index: -1 }
+.brand { font-weight: 800; font-size: 16px; letter-spacing: -0.03em; display: flex; align-items: center; gap: 8px }
+.brand i { font-style: normal; display: grid; place-items: center; width: 28px; height: 28px; border-radius: var(--radius-m); background: var(--primary-light); color: var(--primary); font-size: 15px }
+.steps { display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: color-mix(in srgb, var(--surface) 60%, transparent); border: 1px solid var(--border) }
+.step { font-size: 12px; font-weight: 600; color: var(--ink-4); padding: 4px 11px; border-radius: 999px; white-space: nowrap }
+.step.done { color: var(--ink-3) }
+.step.on { color: color-mix(in oklab, var(--primary) 62%, var(--aura-text)); background: radial-gradient(130% 150% at center, color-mix(in srgb, var(--primary) 40%, var(--aura-tint)), color-mix(in srgb, var(--primary) 18%, transparent) 72%); box-shadow: 0 2px 10px color-mix(in srgb, var(--primary) 20%, transparent) }
+.online { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-3) }
+.faces { display: flex }
+.faces img { margin-left: -6px; border: 2px solid var(--desk) }
+.faces img:first-child { margin-left: 0 }
+
+/* ── 본문 그리드 ── */
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: start }
+.main.solo { grid-template-columns: minmax(0, 640px); justify-content: center }
+@media (max-width: 820px) { .main, .main.solo { grid-template-columns: minmax(0, 1fr) } }
+.side { display: grid; gap: 14px; min-width: 0 }
+
+/* ── 재질: 베이직 글라스 카드 ── */
+.card { background: color-mix(in srgb, var(--surface) var(--glass-mix), transparent); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); border: 1px solid var(--border); border-radius: var(--radius-l); box-shadow: var(--shadow-m); padding: 22px; display: grid; gap: 14px; min-width: 0 }
+.card.tight { padding: 16px; gap: 10px }
+.eyebrow { font-size: 12px; font-weight: 700; color: var(--primary); letter-spacing: .02em }
+h1, h2, h3 { margin: 0; text-wrap: balance; letter-spacing: -0.03em }
+h1 { font-size: clamp(28px, 5vw, 38px); font-weight: 800; line-height: 1.15 }
+h2 { font-size: 22px; font-weight: 800; line-height: 1.3 }
+h3 { font-size: 15px; font-weight: 700 }
+p { margin: 0 }
+.sub { color: var(--ink-3); font-size: 14px }
+.tiny { color: var(--ink-4); font-size: 12px }
+.err { color: var(--danger); font-size: 13px; font-weight: 600 }
+hr { border: 0; border-top: 1px dashed var(--border-strong); margin: 2px 0; width: 100% }
+
+/* ── 재질: 그레인 오라 버튼 ── */
+.btn { --c: var(--ink-2); position: relative; isolation: isolate; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 15px; border: 0; border-radius: var(--radius-m); font: 600 13px var(--font); letter-spacing: -0.01em; cursor: pointer; white-space: nowrap;
+  color: var(--c);
+  background: radial-gradient(130% 150% at center, color-mix(in srgb, var(--c) var(--aura-idle-mix), var(--aura-idle-tint)), color-mix(in srgb, var(--surface) 20%, transparent) 78%);
+  box-shadow: 0 1px 6px var(--aura-idle-shadow), inset 0 0 0 1px var(--aura-idle-ring);
+  transition: transform .15s cubic-bezier(.34,1.56,.64,1), box-shadow .2s }
+.btn::after { content: ""; position: absolute; inset: 0; z-index: -1; background-image: var(--grain); background-size: 70px 70px; mix-blend-mode: screen; opacity: var(--grain-opacity); pointer-events: none; -webkit-mask-image: radial-gradient(ellipse at center, #000 0%, rgba(0,0,0,.55) 45%, transparent 85%); mask-image: radial-gradient(ellipse at center, #000 0%, rgba(0,0,0,.55) 45%, transparent 85%) }
+.btn:active:not(:disabled) { transform: scale(.95) }
+.btn.on { color: color-mix(in oklab, var(--c) 62%, var(--aura-text)); background: radial-gradient(130% 150% at center, color-mix(in srgb, var(--c) 78%, var(--aura-tint)), color-mix(in srgb, var(--c) 34%, transparent) 72%); box-shadow: 0 3px 16px color-mix(in srgb, var(--c) var(--aura-glow), transparent) }
+.btn.primary { --c: var(--primary) }
+.btn.rust { --c: var(--secondary) }
+.btn.lg { height: 50px; padding: 0 24px; font-size: 16px; font-weight: 700; border-radius: var(--radius-l); width: 100% }
+.btn.text { background: none; box-shadow: none; height: auto; padding: 2px 0; color: var(--ink-3); text-decoration: underline; text-underline-offset: 3px }
+.btn.text::after { display: none }
+.btn:disabled { opacity: .45; cursor: default }
+.btn:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center }
+
+/* ── 입력 ── */
+.field { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: var(--ink-2) }
+input, textarea { font: 15px/1.5 var(--font); color: var(--ink); background: var(--surface-warm); border: 1px solid var(--border-strong); border-radius: var(--radius-m); padding: 11px 13px; width: 100% }
+textarea { resize: vertical; min-height: 96px; font-size: 16px }
+input::placeholder, textarea::placeholder { color: var(--ink-4) }
+
+/* ── 홈: 방법 ── */
+.how { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; counter-reset: s }
+@media (max-width: 560px) { .how { grid-template-columns: minmax(0, 1fr) } }
+.how li { counter-increment: s; background: var(--surface-subtle); border-radius: var(--radius-m); padding: 12px 14px; font-size: 13px; color: var(--ink-3) }
+.how li::before { content: counter(s); display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--primary-light); color: var(--primary); font: 700 11px var(--font); margin-bottom: 6px }
+.how b { display: block; color: var(--ink); font-size: 14px }
+.seg { display: inline-flex; gap: 6px }
+
+/* ── 사람 ── */
+.av { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; background: var(--surface-subtle); flex: none }
+.av.sm { width: 20px; height: 20px }
+.people { display: grid; gap: 4px }
+.person { display: flex; align-items: center; gap: 10px; padding: 8px 6px; border-radius: var(--radius-m); min-width: 0 }
+.person + .person { border-top: 1px solid var(--border) }
+.person .who { min-width: 0; flex: 1; display: grid; line-height: 1.35 }
+.person .who b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.person .who span { font-size: 12px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-5); flex: none }
+.dot.on { background: var(--primary); box-shadow: 0 0 0 3px var(--primary-subtle) }
+.badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--surface-subtle); color: var(--ink-3); white-space: nowrap }
+.badge.ok { background: var(--primary-light); color: var(--primary) }
+.badge.host { background: color-mix(in srgb, var(--sand) 22%, transparent); color: color-mix(in oklab, var(--sand) 60%, var(--ink)) }
+.badge.ghost { background: color-mix(in srgb, var(--danger) 14%, transparent); color: var(--danger) }
+
+/* ── 초대 ── */
+.invite ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 13px; color: var(--ink-2) }
+.invite b { color: var(--ink) }
+.linkbox { display: flex; gap: 6px }
+.linkbox input { font: 12px var(--mono); padding: 8px 10px; min-width: 0 }
+
+/* ── 토스트 ── */
+.toasts { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 70px); transform: translateX(-50%); display: grid; gap: 8px; z-index: 50; pointer-events: none; width: max-content; max-width: calc(100% - 32px) }
+.toast { background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(8px); border: 1px solid var(--border); box-shadow: var(--shadow-l), 0 4px 18px color-mix(in srgb, var(--primary) 18%, transparent); border-radius: 999px; padding: 9px 16px; font-size: 13px; font-weight: 600; animation: toastIn .45s cubic-bezier(.34,1.56,.64,1) both }
+@keyframes toastIn { from { opacity: 0; transform: translateY(-10px) scale(.9) } }
+.empty { text-align: center; color: var(--ink-4); font-size: 13px; padding: 18px; border: 1.5px dashed var(--border-strong); border-radius: var(--radius-m) }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important } }
+
+/* ── 진상 손님: 한 화면 한 대화방 ── */
+.app { max-width: 720px }
+.top { position: relative }
+.top::before { display: none }
+.tabs { display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: color-mix(in srgb, var(--surface) 60%, transparent); border: 1px solid var(--border) }
+.tab { border: 0; background: none; font: 600 13px var(--font); color: var(--ink-3); padding: 5px 13px; border-radius: 999px; cursor: pointer; white-space: nowrap }
+.tab small { font-size: 11px; color: var(--ink-4); margin-left: 3px }
+.tab.on { color: color-mix(in oklab, var(--primary) 62%, var(--aura-text)); background: radial-gradient(130% 150% at center, color-mix(in srgb, var(--primary) 40%, var(--aura-tint)), color-mix(in srgb, var(--primary) 18%, transparent) 72%) }
+.tab:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px }
+#view { display: grid; gap: 14px; min-width: 0 }
+.skel { display: grid; gap: 10px }
+.skel i { display: block; height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--surface-subtle), var(--border-strong), var(--surface-subtle)); background-size: 200% 100%; animation: shimmer 1.4s linear infinite }
+@keyframes shimmer { to { background-position: -200% 0 } }
+
+/* 손님 바 (위에 고정) */
+.custbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: color-mix(in srgb, var(--surface) var(--glass-mix), transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid var(--border); border-radius: var(--radius-l); box-shadow: var(--shadow-m); padding: 10px 12px; display: grid; gap: 8px }
+.cb-row { display: flex; gap: 11px; align-items: center; cursor: pointer; border: 0; background: none; padding: 0; text-align: left; font: inherit; color: inherit; width: 100% }
+.cb-face { width: 40px; height: 40px; flex: none; border-radius: 12px; display: grid; place-items: center; background: color-mix(in srgb, var(--mood) 18%, var(--surface)); color: var(--mood); transition: background .4s, color .4s }
+.cb-face svg { width: 23px; height: 23px; stroke-width: 1.8 }
+.cb-face.shake { animation: shake .45s }
+@keyframes shake { 20% { transform: translateX(-4px) rotate(-5deg) } 40% { transform: translateX(4px) rotate(4deg) } 60% { transform: translateX(-3px) } 80% { transform: translateX(2px) } }
+.cb-main { flex: 1; min-width: 0; display: grid; gap: 5px }
+.cb-top { display: flex; align-items: baseline; gap: 8px; min-width: 0 }
+.cb-name { font-weight: 800; font-size: 15px; letter-spacing: -0.02em; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.clock { font: 800 16px var(--mono); font-variant-numeric: tabular-nums }
+.clock.low { color: var(--danger) } .clock.paused { color: var(--ink-4) }
+.meter { height: 6px; border-radius: 3px; background: var(--surface-subtle); overflow: hidden }
+.meter i { display: block; height: 100%; border-radius: 3px; background: var(--mood); transition: width .7s cubic-bezier(.34,1.56,.64,1), background .4s }
+.who-tag { flex: none; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: color-mix(in srgb, var(--secondary) 14%, transparent); color: var(--secondary) }
+.who-tag.me { background: var(--primary-light); color: var(--primary) }
+.meter-row { display: flex; align-items: center; gap: 8px }
+.meter-row .meter { flex: 1 }
+.anger { font: 700 12px var(--font); color: var(--mood); font-variant-numeric: tabular-nums; white-space: nowrap }
+.role { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-3); border-top: 1px solid var(--border); padding-top: 8px; min-width: 0 }
+.role-txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.role-txt b { color: var(--ink) }
+.cb-sub { font-size: 12px; color: var(--ink-4); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.cb-chev { color: var(--ink-4); transition: transform .2s }
+.cb-chev svg { width: 16px; height: 16px }
+.custbar.open .cb-chev { transform: rotate(180deg) }
+.cb-more { display: grid; gap: 6px; padding: 4px 2px 2px; border-top: 1px dashed var(--border-strong); padding-top: 9px; font-size: 13.5px; color: var(--ink-2); line-height: 1.55 }
+.tags { display: flex; flex-wrap: wrap; gap: 5px }
+.tag { font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--surface-subtle); color: var(--ink-3) }
+
+/* 대화방 */
+.thread { display: grid; gap: 9px; align-content: start; padding: 6px 2px 4px; position: relative; min-height: 120px }
+.sep { display: flex; align-items: center; gap: 10px; font-size: 12px; font-weight: 600; color: var(--ink-4); margin-top: 8px; min-width: 0 }
+.sep::before, .sep::after { content: ""; flex: 1; height: 1px; background: var(--border-strong); min-width: 12px }
+.sep span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 85% }
+.sep b { color: var(--ink-2) }
+.sep .plus { color: var(--primary) }
+.fold { justify-self: center; font: 600 12px var(--font); color: var(--ink-3); background: var(--surface-subtle); border: 0; border-radius: 999px; padding: 4px 12px; cursor: pointer }
+.sys { justify-self: center; font-size: 13px; color: var(--ink-3); text-align: center; padding: 6px 0 }
+.msg { display: grid; gap: 4px; max-width: 82%; min-width: 0 }
+.msg.c { justify-self: start }
+.msg.p { justify-self: end; justify-items: end }
+.bubble { padding: 9px 13px; border-radius: 16px; font-size: 15px; line-height: 1.6; overflow-wrap: anywhere }
+.msg.c .bubble { background: var(--surface); border: 1px solid var(--border); border-bottom-left-radius: 4px }
+.msg.p .bubble { background: var(--primary-light); color: color-mix(in oklab, var(--primary) 55%, var(--ink)); border-bottom-right-radius: 4px }
+.meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px }
+.act { color: var(--ink-4); font-style: italic }
+.thought { display: inline-flex; gap: 4px; align-items: center; color: var(--secondary) }
+.thought svg { width: 12px; height: 12px }
+.grade { font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--surface-subtle); color: var(--ink-3); font-variant-numeric: tabular-nums }
+.grade.good { background: var(--primary-light); color: var(--primary) }
+.grade.bad { background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger) }
+.dots span { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--ink-4); margin: 0 2px; animation: dot 1s infinite }
+.dots span:nth-child(2) { animation-delay: .15s } .dots span:nth-child(3) { animation-delay: .3s }
+@keyframes dot { 50% { transform: translateY(-4px); opacity: .5 } }
+.floaty { position: absolute; bottom: 0; font-size: 26px; pointer-events: none; animation: floaty 1.8s ease-out forwards }
+@keyframes floaty { to { transform: translateY(-180px) scale(1.4); opacity: 0 } }
+
+/* 리뷰 (대화방 안) */
+.reviewbox { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-l); padding: 14px; display: grid; gap: 10px; margin-top: 6px }
+.reviewbox .hd { font-size: 15px; font-weight: 800; letter-spacing: -0.02em }
+.rv { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; padding-top: 10px; border-top: 1px solid var(--border) }
+.rv .stars { color: var(--sand); font-size: 13px; letter-spacing: 1px }
+.rv p { grid-column: 2 / 4; font-size: 13.5px; color: var(--ink-2); line-height: 1.55 }
+.sc { font: 800 15px var(--mono); font-variant-numeric: tabular-nums }
+
+/* 아래 입력 도크 (아래에 고정) */
+.dock { position: sticky; bottom: 0; z-index: 5; padding: 8px 0 calc(10px + env(safe-area-inset-bottom, 0px)); background: linear-gradient(to top, var(--desk) 65%, transparent) }
+.dock .panel { background: color-mix(in srgb, var(--surface) var(--glass-mix), transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid var(--border); border-radius: var(--radius-l); box-shadow: var(--shadow-m); padding: 8px; display: grid; gap: 6px }
+.dock .line { display: flex; gap: 8px; align-items: center; min-width: 0 }
+.dock textarea { border: 0; background: transparent; min-height: 42px; height: 42px; resize: none; padding: 10px 8px; font-size: 15px }
+.dock textarea:focus-visible { outline: none }
+.dock .hint { font-size: 12.5px; color: var(--ink-3); padding: 0 6px; flex: 1; min-width: 0 }
+.dock .react .btn { height: 38px; font-size: 18px; padding: 0 12px }
+.dock input { padding: 9px 11px; font-size: 14px }
+
+/* 목록 (지난 손님 · 순위 · 대기실) */
+.list { display: grid }
+.li { display: flex; align-items: center; gap: 12px; padding: 11px 4px; border: 0; border-top: 1px solid var(--border); background: none; font: inherit; color: inherit; text-align: left; width: 100%; min-width: 0 }
+.li:first-child { border-top: 0 }
+button.li { cursor: pointer; border-radius: 0 }
+button.li:hover { background: var(--surface-subtle) }
+.li .ico { width: 34px; height: 34px; flex: none; border-radius: 10px; display: grid; place-items: center; background: var(--surface-subtle); color: var(--ink-3) }
+.li .ico svg { width: 18px; height: 18px }
+.li .txt { flex: 1; min-width: 0; display: grid; line-height: 1.4 }
+.li .txt b { font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.li .txt span { font-size: 12.5px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.li .no { font: 800 15px var(--mono); color: var(--ink-4); width: 22px; text-align: center }
+.li:first-child .no.gold { color: var(--sand) }
+.back { justify-self: start }
+details.howto > summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--ink-3); list-style: none }
+details.howto > summary::-webkit-details-marker { display: none }
+details.howto ol { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 4px; font-size: 13px; color: var(--ink-2) }
+.ic svg { width: 1em; height: 1em; vertical-align: -0.12em }
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand"><i id="brand-ic">!</i>진상 손님 버티기</div>
+    <nav class="tabs" id="tabs" aria-label="화면"></nav>
+    <div class="online" id="online"></div>
+  </header>
+  <main id="view"><div class="card"><p class="sub">가게 문 여는 중…</p></div></main>
+</div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<script>
+const ART_URL = "https://claude.ai/artifact/EQ5qq7oHvumfWRWA9UTamS";
+const TURN_MS = 120000, MAX_LINES = 10;
+const REACTS = ["🔥", "😂", "💀", "👏"];
+const PLACES = ["편의점", "카페", "휴대폰 매장", "헬스장", "미용실", "은행 창구", "택배 대리점", "PC방", "고깃집", "호텔 프런트", "중고거래 직거래 현장", "회사 탕비실"];
+const OUTCOME = { happy: ["🙂", "만족 퇴장"], boom: ["🤯", "손님 폭발"], time: ["⏰", "시간 종료"], lines: ["💬", "대화 한도"], skip: ["🚪", "자리 비움"] };
+const $ = (id) => document.getElementById(id);
+function h(tag, props = {}, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "style") el.style.cssText = v;
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else if (v !== false && v != null) el[k] = v;
+  }
+  for (const c of kids.flat()) if (c != null && c !== false) el.append(c);
+  return el;
+}
+const pascal = (n) => n.split("-").map((w) => w[0].toUpperCase() + w.slice(1)).join("");
+function icon(name, fallback = "") {
+  const node = window.lucide?.icons?.[pascal(name)];
+  return node ? window.lucide.createElement(node) : document.createTextNode(fallback);
+}
+const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+const mood = (a) => `hsl(${Math.round(140 - a * 1.35)} 45% 45%)`;
+const faceOf = (a) => (a < 20 ? "laugh" : a < 40 ? "smile" : a < 60 ? "meh" : a < 80 ? "frown" : "angry");
+const fmt = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
+const staffOf = (c) => c?.staff || `${c?.place || "가게"} 직원`;
+const goalOf = (c) => c?.goal || "손님 분노를 낮춰서 웃으며 돌려보내기";
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ---------- 상태 ---------- */
+let db, user, sample, room, me = null, canWrite = true, booted = false;
+let state = null, players = [], rounds = [], peers = [], peersReady = false;
+let busy = false, errMsg = "", confirmFold = false, customIdea = "";
+let tab = "now", pastOpen = null, custOpen = false, reactCount = 0, lastAnimated = "";
+const expanded = new Set(), profiles = {}, pending = new Set();
+
+(async () => {
+  [db, user, sample, room] = await Promise.all(["db", "user", "sample", "room"].map((n) => claude.use(n)));
+  booted = true;
+  $("brand-ic").replaceChildren(icon("store", "!"));
+  if (!db) return render();
+  me = user ? await user.id() : null;
+  if (user && (await user.can("data.write")) === false) canWrite = false;
+  const onErr = (e) => { errMsg = "연결이 끊겼어요. 새로고침해 주세요. (" + e.code + ")"; render(); };
+  db.doc("game/state").onSnapshot((s) => {
+    const prev = state; state = s.exists ? s.data() : null;
+    const t = state?.turn, pt = prev?.turn;
+    if (t && pt && t.player === pt.player && t.anger > pt.anger + 9) setTimeout(shakeFace, 50);
+    if (t?.status === "done" && pt?.status === "live" && t.player === pt.player) toast(`${OUTCOME[t.endedBy]?.[0] || ""} ${nameOf(t.player)} 응대 끝 · +${t.score}`);
+    if (t?.status === "live" && pt?.status !== "live" && t.player !== me) toast(`🛎 ${nameOf(t.player)}님 응대 시작`);
+    if (isHost() && t?.status === "live" && t.needsHost && t.thinking) relay();
+    render();
+  }, onErr);
+  db.collection("players").onSnapshot((s) => { players = s.docs.map((d) => ({ id: d.id, ...d.data() })); render(); }, onErr);
+  db.collection("rounds").onSnapshot((s) => { rounds = s.docs.map((d) => ({ id: d.id, ...d.data() })); render(); }, onErr);
+  if (room) {
+    room.onPeers((ch) => {
+      peers = ch.peers.filter((p) => p.kind === "viewer");
+      if (peersReady) for (const p of ch.joined) if (!p.isMe && p.by) ensureProfiles([p.by]).then(() => toast(`👋 ${nameOf(p.by)}님이 들어왔어요`));
+      render();
+    });
+    room.on("react", (m) => {
+      const e = REACTS.includes(m.data?.e) ? m.data.e : null;
+      if (!e) return;
+      floaty(e);
+      if (isResponder()) reactCount++;
+    });
+    setTimeout(() => { peersReady = true; render(); }, 3000);
+  }
+  setInterval(tickClock, 250);
+  render();
+})();
+
+/* ---------- 파생 ---------- */
+const onlineIds = () => new Set(peers.map((p) => p.by).filter(Boolean));
+const isHost = () => !!(state && me && state.hostId === me);
+const roster = () => players.filter((p) => state && p.gameId === state.gameId).sort((a, b) => a.joinedAt - b.joinedAt);
+const current = () => state?.order?.[state.turnIdx];
+const isResponder = () => !!(state?.turn && state.turn.player === me && state.turn.status === "live");
+const nameOf = (id) => (id === me ? "나" : profiles[id]?.name || "누군가");
+const avatar = (id, cls = "av") => h("img", { className: cls, alt: "", src: profiles[id]?.avatarUrl || "data:image/gif;base64,R0lGODlhAQABAAAAACw=" });
+function ensureProfiles(ids) {
+  const miss = [...new Set(ids)].filter((i) => i && !profiles[i] && !pending.has(i));
+  if (!user || !miss.length) return Promise.resolve();
+  miss.forEach((i) => pending.add(i));
+  return user.profiles(miss).then((p) => { Object.assign(profiles, p); miss.forEach((i) => pending.delete(i)); render(); });
+}
+function remaining(t = state?.turn) {
+  if (!t?.clock) return TURN_MS;
+  return TURN_MS - t.clock.spent - (t.clock.resumeAt ? Date.now() - t.clock.resumeAt : 0);
+}
+// 지난 손님: 지금 화면에 떠 있는 손님은 빼고 최신순
+const pastRounds = () => rounds.filter((r) => !(state && r.gameId === state.gameId && r.round === state.round && ["playing", "review", "reviewing"].includes(state.phase))).sort((a, b) => (b.at || 0) - (a.at || 0));
+
+/* ---------- 쓰기 ---------- */
+async function guard(fn) {
+  errMsg = "";
+  try { await fn(); } catch (e) {
+    errMsg = e?.code === "invalid_argument" ? "기록할 권한이 없어요. 가게 주인에게 Editor로 초대해 달라고 하세요." : e?.message || "실패했어요. 다시 시도해 주세요.";
+  }
+  render();
+}
+const update = (patch) => db.doc("game/state").update(patch);
+const openShop = () => guard(async () => {
+  const gameId = "g" + Date.now().toString(36);
+  await db.doc("game/state").set({ gameId, hostId: me, phase: "lobby", round: 0, order: [], turnIdx: 0, customer: null, turn: null, roundResults: [], review: null, scores: {} });
+  await db.doc("players/" + me).set({ gameId, joinedAt: Date.now() });
+});
+const join = () => guard(() => db.doc("players/" + me).set({ gameId: state.gameId, joinedAt: Date.now() }));
+const takeHost = () => guard(() => update({ hostId: me }));
+
+async function newCustomer() {
+  if (!sample) { errMsg = "이 화면에서는 AI를 부를 수 없어요."; return render(); }
+  const order = state.phase === "lobby" ? roster().map((p) => p.id) : state.order;
+  const idea = customIdea.trim();
+  busy = true;
+  await guard(async () => {
+    await update({ phase: "customer", order });
+    try {
+      const out = await sample.json(`즉흥 상황극 게임용 웃긴 진상 손님 캐릭터를 하나 만들어라.
+${idea ? "상황/장소 힌트: " + idea : "장소: " + pick(PLACES)}
+- 억지스럽고 웃긴 요구를 끈질기게 하는 손님. 혐오·폭력·성적인 내용은 빼라.
+- 직원(플레이어)이 말로 달래야 하는 상황이어야 한다.
+JSON만 답한다:
+{"name":"손님 별명(예: 영수증 없는 교환왕)","place":"장소","staff":"플레이어가 맡을 직원 역할(예: 휴대폰 매장 상담 직원)","goal":"직원의 목표 한 줄(예: 규정은 지키면서 손님을 웃으며 돌려보내기)","tags":["특징 3개, 각 10자 이내"],"situation":"상황 설명 1~2문장","opening":"손님 첫 대사 1~2문장","anger":40~65 사이 시작 분노 정수}`);
+      const c = { name: String(out.name || "이름 모를 손님"), place: String(out.place || ""), staff: String(out.staff || ""), goal: String(out.goal || ""), tags: (out.tags || []).slice(0, 4).map(String), situation: String(out.situation || ""), opening: String(out.opening || "저기요!"), anger: clamp(out.anger | 0 || 50, 20, 80) };
+      await update({ phase: "playing", round: state.round + 1, customer: c, turnIdx: 0, turn: null, roundResults: [], review: null });
+    } catch (e) {
+      await update({ phase: state.round ? "review" : "lobby" }).catch(() => {});
+      throw { message: e?.code === "rate_limited" ? "AI 사용량이 잠깐 몰렸어요. 조금 뒤에 다시 눌러 주세요." : "손님을 데려오지 못했어요. 다시 눌러 주세요." };
+    }
+  });
+  busy = false; render();
+}
+
+function startTurn() {
+  const c = state.customer;
+  reactCount = 0;
+  return guard(() => update({ turn: { player: me, status: "live", anger: c.anger, msgs: [{ f: "c", t: c.opening }], thinking: false, clock: { spent: 0, resumeAt: Date.now() }, points: 0, endedBy: null, score: null, bonus: null, reacts: null, needsHost: false, viaHost: false, lastError: null } }));
+}
+
+// 손님 대답 만들기. 응대하는 사람 계정에서 안 되면 가게 주인 계정이 대신(relay)
+const aiReply = (t, c = state.customer) => sample.json(`즉흥 상황극. 너는 진상 손님 '${c.name}'이다. 상대는 이 가게 직원(플레이어)이다.
+장소: ${c.place} / 손님 특징: ${c.tags.join(", ")} / 직원 역할: ${staffOf(c)}
+상황: ${c.situation}
+역할 규칙 (가장 중요):
+- 너는 끝까지 손님이다. 절대 직원처럼 말하거나 행동하지 않는다. 음료·물건을 만들어 주거나, 서비스해 주거나, "만들어드릴게요", "도와드릴게요", "기대하세요" 같은 직원의 말은 금지.
+- 요구하고, 불평하고, 트집 잡고, 마음에 들면 누그러지는 쪽이 너다. 서비스를 받는 쪽이 너다.
+- act는 손님인 너의 행동, thought는 손님인 너의 속마음이다(직원 입장 금지).
+- 직원이 이상한 말을 해도 역할을 바꾸지 말고 손님으로서 반응한다.
+채점 규칙:
+- 직원 말의 맞춤법, 오타, 띄어쓰기, 말투 실수는 절대 언급하거나 트집 잡지 않는다. 내용에만 반응한다.
+- grade: 방금 직원 말의 응대 점수 0~20. 공감, 센스, 유머, 창의적인 해결책일수록 높다. 성의 없음, 원칙만 반복, 비꼼, 무시는 낮다.
+- why: 그 점수의 이유를 8자 이내로(예: "공감 굿", "센스 만점", "영혼 없음").
+- 분노 게이지(0~100)를 갱신한다. 지금 분노는 ${t.anger}. grade가 12 이상이면 분노는 반드시 내려가고(-5~-25), 6 이하면 올라간다. 그 사이는 소폭 변화.
+- 캐릭터는 고집을 부려도 되지만, 좋은 응대에는 속마음과 분노가 같은 방향으로 누그러져야 한다.
+- 분노가 0 근처면 만족해서 떠날 준비를 하고, 100이면 폭발한다.
+대화 (손님=너, 직원=플레이어):
+${t.msgs.map((m) => (m.f === "c" ? "손님(너): " : "직원: ") + m.t).join("\n")}
+이제 손님(너)의 다음 반응을 쓴다.
+JSON만 답한다:
+{"grade":응대 점수 정수,"why":"이유 8자 이내","reply":"손님(너)이 직원에게 하는 말 1~2문장","act":"짧은 행동 지문(예: 카운터를 손가락으로 톡톡)","thought":"손님(너)의 속마음 한 줄","anger":새 분노 정수}`, { cache: false });
+const HOSTABLE = ["not_granted", "sampling_disabled", "capability_disabled", "capability_removed", "not_declared", "session_expired"];
+function applyReply(t, out) {
+  const grade = clamp(Math.round(Number(out.grade)) || 0, 0, 20);
+  const pm = t.msgs.at(-1); pm.g = grade; pm.why = String(out.why || "").slice(0, 12);
+  t.points = (t.points || 0) + grade;
+  t.anger = clamp(Number.isFinite(Number(out.anger)) ? Math.round(Number(out.anger)) : t.anger, 0, 100);
+  t.msgs.push({ f: "c", t: String(out.reply || "…"), act: String(out.act || ""), thought: String(out.thought || "") });
+  t.thinking = false; t.needsHost = false; t.lastError = null; t.clock.resumeAt = Date.now();
+  const lines = t.msgs.filter((m) => m.f === "p").length;
+  return t.anger >= 100 ? "boom" : t.anger <= 5 ? "happy" : lines >= MAX_LINES ? "lines" : remaining(t) <= 0 ? "time" : null;
+}
+async function sendLine(text) {
+  const t = structuredClone(state.turn);
+  if (!t || t.status !== "live" || busy) return;
+  busy = true;
+  t.msgs.push({ f: "p", t: text });
+  t.clock = { spent: t.clock.spent + (Date.now() - t.clock.resumeAt), resumeAt: null };
+  t.thinking = true; t.lastError = null;
+  if (t.viaHost || !sample) t.needsHost = true;
+  render();
+  await guard(async () => {
+    await update({ turn: t });
+    if (t.needsHost) return; // 가게 주인 화면이 대답을 만들어 줌
+    let out;
+    try { out = await aiReply(t); }
+    catch (e) {
+      // 진행자가 아니면 어떤 에러든 가게 주인 계정으로 넘긴다 (코드는 원인 확인용으로 남김)
+      if (!isHost()) { t.needsHost = true; t.viaHost = HOSTABLE.includes(e?.code); t.lastCode = e?.code || "unknown"; await update({ turn: t }); return; }
+      t.thinking = false; t.clock.resumeAt = Date.now(); t.msgs.pop(); t.lastError = `손님이 대답을 못 했어요. 다시 보내 주세요. (${e?.code || "unknown"})`;
+      await update({ turn: t });
+      throw { message: e?.code === "rate_limited" ? "AI가 잠깐 바빠요. 다시 보내 주세요." : `손님이 대답을 못 했어요. 다시 보내 주세요. (${e?.code || "unknown"})` };
+    }
+    const end = applyReply(t, out);
+    if (end) await endTurn(end, t); else await update({ turn: t });
+  });
+  busy = false; render();
+  $("line")?.focus({ preventScroll: true }); stickBottom(true);
+}
+let relaying = false;
+async function relay() {
+  if (relaying || !sample) return;
+  relaying = true;
+  const t = structuredClone(state.turn);
+  try {
+    const out = await aiReply(t);
+    if (state.turn?.player !== t.player || state.turn?.status !== "live") return;
+    const end = applyReply(t, out);
+    if (end) await endTurn(end, t, 0); else await update({ turn: t });
+  } catch (e) {
+    t.thinking = false; t.needsHost = false; t.msgs.pop(); t.clock.resumeAt = Date.now();
+    t.lastError = `가게 주인 계정으로도 손님이 대답을 못 했어요. 다시 보내 주세요. (${e?.code || "unknown"})`;
+    await update({ turn: t }).catch(() => {});
+  } finally { relaying = false; }
+}
+
+async function endTurn(reason, t = structuredClone(state.turn), reacts = reactCount) {
+  if (t.clock.resumeAt) t.clock = { spent: t.clock.spent + (Date.now() - t.clock.resumeAt), resumeAt: null };
+  t.status = "done"; t.endedBy = reason; t.thinking = false; t.needsHost = false; t.reacts = reacts;
+  // 점수 = 한마디마다 받은 응대 점수 합 + 만족 퇴장 보너스 30 + 리액션(최대 20). 폭발하면 보너스 없음
+  t.bonus = (reason === "happy" ? 30 : 0) + (reason === "boom" ? 0 : Math.min(20, reacts * 2));
+  t.score = (t.points || 0) + t.bonus;
+  const scores = { ...state.scores, [t.player]: (state.scores?.[t.player] || 0) + t.score };
+  const results = [...(state.roundResults || []), { player: t.player, anger: t.anger, endedBy: reason, score: t.score, msgs: t.msgs }];
+  await update({ turn: t, scores, turnIdx: state.turnIdx + 1, roundResults: results });
+  await saveRound(null, results).catch(() => {});
+}
+const skipTurn = () => guard(async () => {
+  const results = [...(state.roundResults || []), { player: current(), anger: state.customer.anger, endedBy: "skip", score: 0, msgs: [] }];
+  await update({ turnIdx: state.turnIdx + 1, roundResults: results });
+  await saveRound(null, results).catch(() => {});
+});
+
+// 응대 하나 끝날 때마다, 리뷰 나올 때 한 번 더 보관 → "지난 손님" 탭
+const saveRound = (review, results = state.roundResults || []) => db.doc(`rounds/${state.gameId}-${state.round}`).set({ gameId: state.gameId, round: state.round, customer: state.customer, results, review, at: Date.now() });
+async function getReview() {
+  if (!sample) return;
+  busy = true;
+  const rs = state.roundResults, c = state.customer;
+  await guard(async () => {
+    await update({ phase: "reviewing" });
+    try {
+      const out = await sample.json(`너는 방금 가게를 다녀간 진상 손님 '${c.name}'이다(${c.place}). 직원들의 응대를 보고 리뷰 앱에 별점과 리뷰를 남긴다. 캐릭터 말투 그대로, 짧고 웃기게. 직원의 맞춤법이나 오타는 언급하지 않는다. 별점은 응대 점수가 높았던 직원일수록 후하게 준다.
+${rs.map((r, i) => `[p${i + 1}] 결과: ${OUTCOME[r.endedBy][1]}, 최종 분노 ${r.anger}, 응대 점수 ${r.score}\n${r.msgs.map((m) => (m.f === "c" ? "손님: " : "직원: ") + m.t).join("\n") || "(응대 안 함)"}`).join("\n\n")}
+JSON만 답한다: {"headline":"오늘 가게에 대한 총평 한 줄","items":[{"p":"p1","stars":1~5,"review":"리뷰 한두 문장"}]}`);
+      const items = rs.map((r, i) => { const it = (out.items || []).find((x) => x.p === "p" + (i + 1)) || {}; return { player: r.player, stars: clamp(it.stars | 0 || 1, 1, 5), review: String(it.review || "…") }; });
+      const review = { headline: String(out.headline || ""), items };
+      await update({ phase: "review", review });
+      await saveRound(review);
+    } catch (e) {
+      const review = { headline: "손님이 리뷰를 안 남기고 떠났다.", items: [] };
+      await update({ phase: "review", review }).catch(() => {});
+      await saveRound(review).catch(() => {});
+    }
+  });
+  busy = false; render();
+}
+
+
+
+/* ---------- 연출 ---------- */
+function toast(text) { const t = h("div", { className: "toast", textContent: text }); $("toasts").append(t); setTimeout(() => t.remove(), 2800); }
+function floaty(e) {
+  const th = $("thread"); if (!th) return;
+  const f = h("span", { className: "floaty", textContent: e, style: `left:${10 + Math.random() * 80}%` });
+  th.append(f); setTimeout(() => f.remove(), 1900);
+}
+function shakeFace() { const f = $("face"); if (!f) return; f.classList.remove("shake"); void f.offsetWidth; f.classList.add("shake"); }
+const nearBottom = () => window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 220;
+function stickBottom(force) { if (!force && !nearBottom()) return; requestAnimationFrame(() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: reduced ? "auto" : "smooth" })); }
+function tickClock() {
+  const el = $("clock"), t = state?.turn;
+  if (!el || !t || t.status !== "live") return;
+  const r = remaining(t);
+  el.textContent = fmt(r);
+  el.className = "clock" + (t.thinking ? " paused" : r < 15000 ? " low" : "");
+  if (isResponder() && !busy && !t.thinking && r <= 0) { busy = true; guard(() => endTurn("time")).then(() => { busy = false; render(); }); }
+}
+
+/* ---------- 조각 ---------- */
+const errEl = () => (errMsg || !canWrite ? h("p", { className: "err", textContent: errMsg || "지금은 구경만 할 수 있어요. 가게 주인에게 Editor로 초대받아야 해요." }) : null);
+function hostAwayRow() {
+  const away = room && peersReady && state && !onlineIds().has(state.hostId) && !isHost() && state.order?.includes(me);
+  return away ? h("div", { className: "line" }, h("span", { className: "hint", textContent: `가게 주인 ${nameOf(state.hostId)}님이 자리를 비웠어요.` }), h("button", { className: "btn rust", textContent: "내가 맡을게요", onclick: () => guard(() => update({ hostId: me })) })) : null;
+}
+
+// 손님 바: 얼굴·이름·분노 막대·시계 한 줄, 누르면 상황 설명
+function custBar(c, anger, sub, clock) {
+  const bar = h("div", { className: "custbar" + (custOpen ? " open" : ""), style: `--mood:${mood(anger)}` },
+    h("button", { className: "cb-row", ariaExpanded: String(custOpen), onclick: () => { custOpen = !custOpen; render(); } },
+      h("div", { className: "cb-face", id: clock ? "face" : null }, icon(faceOf(anger), "😠")),
+      h("div", { className: "cb-main" },
+        h("div", { className: "cb-top" }, h("span", { className: "who-tag", textContent: "손님" }), h("span", { className: "cb-name", textContent: c.name }), clock),
+        h("div", { className: "meter-row" }, h("div", { className: "meter", title: `분노 ${anger}` }, h("i", { style: `width:${anger}%` })), h("span", { className: "anger", textContent: `분노 ${anger}` })),
+        h("div", { className: "cb-sub", textContent: sub })),
+      h("span", { className: "cb-chev" }, icon("chevron-down", "▾"))),
+    h("div", { className: "role" }, h("span", { className: "who-tag me", textContent: "내 역할" }),
+      h("span", { className: "role-txt" }, h("b", { textContent: staffOf(c) }), " · 목표: " + goalOf(c))),
+    custOpen ? h("div", { className: "cb-more" },
+      h("div", { className: "tags" }, h("span", { className: "tag", textContent: "📍 " + c.place }), (c.tags || []).map((t) => h("span", { className: "tag", textContent: t }))),
+      h("p", { textContent: c.situation })) : null);
+  return bar;
+}
+
+// 말풍선 묶음. animKey가 있으면 마지막 손님 대사를 한 글자씩
+function bubbles(msgs, animKey) {
+  return msgs.map((m, i) => {
+    if (m.f === "p") return h("div", { className: "msg p" }, h("div", { className: "bubble", textContent: m.t }),
+      m.g != null ? h("div", { className: "meta" }, h("span", { className: "grade" + (m.g >= 12 ? " good" : m.g <= 6 ? " bad" : ""), textContent: `+${m.g}${m.why ? " · " + m.why : ""}` })) : null);
+    const bubble = h("div", { className: "bubble" });
+    const meta = (m.act || m.thought) ? h("div", { className: "meta" },
+      m.act ? h("span", { className: "act", textContent: m.act }) : null,
+      m.thought ? h("span", { className: "thought" }, icon("message-circle", "💭"), m.thought) : null) : null;
+    const key = `${animKey}:${i}`;
+    if (animKey && i === msgs.length - 1 && i > 0 && lastAnimated !== key && !reduced) {
+      lastAnimated = key; if (meta) meta.hidden = true;
+      let n = 0; const tm = setInterval(() => { n++; bubble.textContent = m.t.slice(0, n); if (n % 12 === 0) stickBottom(); if (n >= m.t.length) { clearInterval(tm); if (meta) meta.hidden = false; stickBottom(); } }, 30);
+    } else bubble.textContent = m.t;
+    return h("div", { className: "msg c" }, bubble, meta);
+  });
+}
+function sep(...kids) { return h("div", { className: "sep" }, h("span", {}, ...kids)); }
+// 끝난 응대 하나: 구분선 + (펼침 or 접힘 버튼)
+function doneTurn(r, key, openByDefault) {
+  const open = expanded.has(key) || (openByDefault && !expanded.has("x" + key));
+  const toggle = () => { if (open) { expanded.delete(key); expanded.add("x" + key); } else { expanded.add(key); expanded.delete("x" + key); } render(); };
+  return [
+    sep(avatar(r.player, "av sm"), h("b", { textContent: nameOf(r.player) }), `${OUTCOME[r.endedBy]?.[0] || ""} ${OUTCOME[r.endedBy]?.[1] || ""} ·`, h("span", { className: "plus", textContent: `+${r.score ?? 0}` })),
+    r.msgs?.length ? (open ? [...bubbles(r.msgs), h("button", { className: "fold", textContent: "접기", onclick: toggle })] : h("button", { className: "fold", textContent: `대화 ${r.msgs.length}개 보기`, onclick: toggle })) : null,
+  ];
+}
+function reviewBox(rv, results) {
+  if (!rv) return null;
+  const byP = Object.fromEntries((results || []).map((r) => [r.player, r]));
+  const items = [...(rv.items || [])].sort((a, b) => (byP[b.player]?.score || 0) - (byP[a.player]?.score || 0));
+  return h("div", { className: "reviewbox" },
+    h("div", { className: "eyebrow", textContent: "손님 리뷰" }),
+    h("div", { className: "hd", textContent: rv.headline ? `“${rv.headline}”` : "" }),
+    items.map((it) => h("div", { className: "rv" },
+      avatar(it.player, "av sm"),
+      h("div", { style: "display:flex;gap:8px;align-items:center;min-width:0" }, h("b", { textContent: nameOf(it.player) }), h("span", { className: "stars", textContent: "★".repeat(it.stars) + "☆".repeat(5 - it.stars) })),
+      h("span", { className: "sc", textContent: "+" + (byP[it.player]?.score ?? 0) }),
+      h("p", { textContent: it.review }))));
+}
+
+/* ---------- 탭: 지금 가게 ---------- */
+function nowView() {
+  if (!booted) return [h("div", { className: "card" }, h("p", { className: "sub", textContent: "가게 문 여는 중…" }))];
+  if (!db) return [h("div", { className: "card" }, h("h2", { textContent: "claude.ai에서 열어주세요" }), h("p", { className: "sub", textContent: "claude.ai에 로그인한 상태로 열어야 함께 플레이할 수 있어요." }))];
+  if (!state) return [h("div", { className: "card", style: "padding:28px;gap:18px" },
+    h("div", { className: "eyebrow", textContent: "멀티플레이 · 2~6명" }),
+    h("h1", { textContent: "진상 손님,\n2분만 버티세요", style: "white-space:pre-line" }),
+    h("p", { className: "sub", textContent: "AI가 진상 손님을 연기해요. 한 명씩 돌아가며 2분 동안 말로 달래고, 나머지는 실시간으로 구경하며 리액션을 던져요." }),
+    h("ol", { className: "how" },
+      h("li", {}, h("b", { textContent: "손님 입장" }), "AI가 진상 캐릭터를 만들어요"),
+      h("li", {}, h("b", { textContent: "2분 응대" }), "한마디마다 응대 점수"),
+      h("li", {}, h("b", { textContent: "리뷰 공개" }), "별점과 리뷰, 누적 순위")),
+    h("button", { className: "btn primary on lg", disabled: !canWrite || !me, textContent: "가게 열기", onclick: openShop }),
+    h("p", { className: "tiny", textContent: "가게를 연 사람이 주인(진행자)이 돼요. 손님 대사는 응대하는 사람의 Claude 사용량으로 만들어져요." }),
+    errEl())];
+
+  const v = state.phase;
+  if (v === "lobby") {
+    const joined = roster().some((p) => p.id === me);
+    const ids = [...new Set([...roster().map((p) => p.id), ...onlineIds()])];
+    ensureProfiles(ids);
+    const inp = h("input", { id: "invite-link", readOnly: true, value: ART_URL, onfocus: (e) => e.target.select() });
+    return [h("div", { className: "card" },
+      h("div", { className: "eyebrow", textContent: "대기실" }),
+      h("h2", { textContent: joined ? "직원들이 모이는 중" : "이 가게에서 같이 일할래요?" }),
+      h("div", { className: "list" }, ids.map((id) => {
+        const inGame = roster().some((p) => p.id === id);
+        return h("div", { className: "li" }, avatar(id), h("div", { className: "txt" }, h("b", { textContent: nameOf(id) })),
+          id === state.hostId ? h("span", { className: "badge host", textContent: "👑 주인" }) : null,
+          h("span", { className: "badge" + (inGame ? " ok" : ""), textContent: inGame ? "참가" : "구경 중" }),
+          room ? h("span", { className: "dot" + (onlineIds().has(id) ? " on" : "") }) : null);
+      })),
+      !joined ? h("button", { className: "btn primary on lg", disabled: !canWrite, textContent: "직원으로 참가", onclick: () => guard(() => db.doc("players/" + me).set({ gameId: state.gameId, joinedAt: Date.now() })) }) : null,
+      h("details", { className: "howto", id: "howto" }, h("summary", { textContent: "👥 친구 부르는 법" }),
+        h("ol", {}, h("li", {}, "오른쪽 위 공유에서 친구 이메일을 넣어요"), h("li", {}, "권한을 Editor(편집자)로 골라 초대해요"), h("li", {}, "아래 링크를 보내면 끝. 공개 링크를 켜면 구경만 할 수 있어요")),
+        h("div", { className: "linkbox", style: "margin-top:8px" }, inp, h("button", { className: "btn", textContent: "복사", onclick: () => { navigator.clipboard?.writeText(ART_URL).then(() => toast("🔗 링크를 복사했어요"), () => inp.select()) ?? inp.select(); } }))),
+      isHost() ? h("label", { className: "field" }, "손님이 나타날 장소 (선택)", h("input", { id: "idea", maxLength: 60, placeholder: "비워두면 랜덤. 예) 우리 회사 탕비실", value: customIdea, oninput: (e) => { customIdea = e.target.value; } })) : null,
+      isHost() ? h("button", { className: "btn rust on lg", disabled: busy || !roster().length, textContent: busy ? "손님 데려오는 중…" : `첫 손님 받기 · 직원 ${roster().length}명`, onclick: newCustomer })
+        : h("p", { className: "sub", textContent: `👑 ${nameOf(state.hostId)}님이 첫 손님을 받으면 시작돼요.` }),
+      h("div", { className: "line" }, hostAwayRow()), errEl())];
+  }
+  if (v === "customer" || v === "reviewing" || !state.customer) return [h("div", { className: "card" },
+    h("h2", { textContent: v === "reviewing" ? "손님이 리뷰를 쓰는 중…" : "딸랑, 손님이 들어오는 중…" }),
+    h("div", { className: "skel" }, h("i", { style: "width:70%" }), h("i", { style: "width:90%" }), h("i", { style: "width:55%" })),
+    h("p", { className: "tiny", textContent: isHost() ? "보통 10~30초 걸려요." : `${nameOf(state.hostId)}님 화면에서 AI가 준비하고 있어요.` }))];
+
+  // playing | review: 손님 바 + 대화방 + 도크
+  const c = state.customer, t = state.turn, live = t?.status === "live";
+  const rs = state.roundResults || [], cur = current();
+  ensureProfiles([...(state.order || []), state.hostId]);
+  const anger = live ? t.anger : rs.at(-1)?.anger ?? c.anger;
+  const sub = live ? `${nameOf(t.player)} 응대 중 · 응대 점수 ${t.points || 0} · ${t.msgs.filter((m) => m.f === "p").length}/${MAX_LINES}마디`
+    : v === "review" ? `${state.round}번째 손님 · 리뷰 도착` : cur ? `${state.round}번째 손님 · 다음 차례 ${nameOf(cur)}` : `${state.round}번째 손님 · 모두 응대 끝`;
+  const clock = live ? h("span", { className: "clock" + (t.thinking ? " paused" : ""), id: "clock", textContent: fmt(remaining(t)) }) : null;
+
+  const thread = h("div", { className: "thread", id: "thread" });
+  rs.forEach((r, i) => thread.append(...doneTurn(r, `${state.gameId}:${state.round}:${i}`, !live && v === "playing" && i === rs.length - 1).flat().filter(Boolean)));
+  if (live) {
+    thread.append(sep(avatar(t.player, "av sm"), h("b", { textContent: nameOf(t.player) }), "응대 중"), ...bubbles(t.msgs, `${state.gameId}:${state.round}:${t.player}`));
+    if (t.thinking) thread.append(...[h("div", { className: "msg c" }, h("div", { className: "bubble dots" }, h("span"), h("span"), h("span"))),
+      t.needsHost ? h("p", { className: "sys", textContent: `${nameOf(t.player)}님 계정에서 AI를 쓸 수 없어서(${t.lastCode || "권한 없음"}), 가게 주인 ${nameOf(state.hostId)}님 계정으로 손님이 대답하는 중이에요.` }) : null].filter(Boolean));
+    if (t.lastError) thread.append(h("p", { className: "sys", style: "color:var(--danger)", textContent: "⚠️ " + t.lastError }));
+  } else if (v === "playing") {
+    if (!rs.length) thread.append(h("p", { className: "sys", textContent: `🛎 ${c.name} 손님이 들어왔어요. 여러분은 ${staffOf(c)}예요. 목표: ${goalOf(c)}` }));
+    thread.append(h("p", { className: "sys", textContent: cur ? `다음 차례 · ${nameOf(cur)}` : "모두 응대했어요. 리뷰를 기다리는 중" }));
+  }
+  if (v === "review") thread.append(reviewBox(state.review, rs));
+
+  return [custBar(c, anger, sub, clock), thread, dock(v, t, live, cur)];
+}
+
+// 아래 고정 도크: 지금 내가 할 수 있는 것 하나
+function dock(v, t, live, cur) {
+  const kids = [];
+  if (live && t.player === me) {
+    const ta = h("textarea", { id: "line", maxLength: 200, placeholder: "손님에게 할 말 (Enter로 보내기)", disabled: !!t.thinking || busy,
+      onkeydown: (e) => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(); } } });
+    const send = () => { const val = ta.value.trim(); if (val) { ta.value = ""; sendLine(val); } };
+    kids.push(h("div", { className: "line" }, ta, h("button", { className: "btn primary on", disabled: !!t.thinking || busy, textContent: "말하기", onclick: send })));
+    kids.push(h("div", { className: "line" }, h("span", { className: "hint", textContent: t.thinking ? "손님이 생각하는 중… 시계가 멈춰 있어요." : "손님이 생각하는 동안엔 시계가 멈춰요." }), h("button", { className: "btn text", textContent: "그만하기", onclick: () => guard(() => endTurn("time")) })));
+  } else if (live) {
+    kids.push(h("div", { className: "line react" }, h("span", { className: "hint", textContent: `${nameOf(t.player)}님 응대 구경 중` }),
+      REACTS.map((e) => h("button", { className: "btn", textContent: e, ariaLabel: "리액션 " + e, onclick: () => { floaty(e); room?.emit("react", { e }).catch(() => {}); } }))));
+    if (isHost()) kids.push(h("div", { className: "line" }, h("span", { className: "hint", textContent: "진행이 멈췄다면" }), h("button", { className: "btn text", textContent: "이 차례 끝내기", onclick: () => guard(() => endTurn("time")) })));
+  } else if (v === "playing" && cur === me) {
+    kids.push(h("button", { className: "btn primary on lg", disabled: !canWrite, textContent: `내 차례 · ${staffOf(state.customer)}(으)로 응대 시작 (2분)`, onclick: startTurn }));
+  } else if (v === "playing" && cur) {
+    kids.push(h("div", { className: "line" }, h("span", { className: "hint", textContent: `${nameOf(cur)}님이 응대를 시작하길 기다리는 중` }), isHost() ? h("button", { className: "btn text", textContent: "건너뛰기", onclick: skipTurn }) : null));
+  } else if (v === "playing") {
+    kids.push(isHost() ? h("button", { className: "btn rust on lg", disabled: busy, textContent: "손님 리뷰 보기", onclick: getReview }) : h("span", { className: "hint", textContent: `${nameOf(state.hostId)}님이 리뷰를 열면 결과가 나와요.` }));
+  } else if (v === "review") {
+    kids.push(isHost()
+      ? h("div", { className: "line" }, h("input", { id: "idea2", maxLength: 60, placeholder: "다음 손님 장소 (비우면 랜덤)", value: customIdea, oninput: (e) => { customIdea = e.target.value; } }), h("button", { className: "btn rust on", disabled: busy, textContent: busy ? "데려오는 중…" : "다음 손님", onclick: newCustomer }))
+      : h("span", { className: "hint", textContent: `${nameOf(state.hostId)}님이 다음 손님을 받으면 이어져요.` }));
+  }
+  const away = hostAwayRow(); if (away) kids.push(away);
+  const err = errEl(); if (err) kids.push(err);
+  return h("div", { className: "dock" }, h("div", { className: "panel" }, kids));
+}
+
+/* ---------- 탭: 지난 손님 ---------- */
+function pastView() {
+  const list = pastRounds();
+  if (pastOpen) {
+    const r = rounds.find((x) => x.id === pastOpen);
+    if (r) {
+      const rs = r.results || [];
+      ensureProfiles(rs.map((x) => x.player));
+      const thread = h("div", { className: "thread" });
+      rs.forEach((x, i) => thread.append(...doneTurn(x, `${r.id}:${i}`, true).flat().filter(Boolean)));
+      if (!rs.length) thread.append(h("p", { className: "sys", textContent: "응대 기록이 없어요." }));
+      thread.append(...[reviewBox(r.review, rs)].filter(Boolean));
+      return [h("button", { className: "btn back", textContent: "← 지난 손님 목록", onclick: () => { pastOpen = null; render(); } }),
+        custBar(r.customer, rs.at(-1)?.anger ?? r.customer.anger, `${r.round}번째 손님 · 직원 ${rs.length}명 응대${r.review ? "" : " · 리뷰 전에 끝남"}`, null), thread];
+    }
+  }
+  if (!list.length) return [h("div", { className: "card" }, h("h2", { textContent: "아직 지난 손님이 없어요" }), h("p", { className: "sub", textContent: "응대가 하나 끝날 때마다 여기에 쌓여요. 손님을 눌러 그때 대화를 다시 볼 수 있어요." }))];
+  return [h("div", { className: "card tight" }, h("h3", { textContent: `지난 손님 ${list.length}명` }),
+    h("div", { className: "list" }, list.map((r) => {
+      const mine = (r.results || []).find((x) => x.player === me);
+      const last = (r.results || []).at(-1);
+      return h("button", { className: "li", onclick: () => { pastOpen = r.id; window.scrollTo(0, 0); render(); } },
+        h("div", { className: "ico", style: `--mood:${mood(last?.anger ?? r.customer?.anger ?? 50)};color:var(--mood)` }, icon(faceOf(last?.anger ?? 50), "🙂")),
+        h("div", { className: "txt" }, h("b", { textContent: r.customer?.name || "손님" }), h("span", { textContent: r.review?.headline ? `“${r.review.headline}”` : `${r.customer?.place || ""} · 직원 ${(r.results || []).length}명` })),
+        mine ? h("span", { className: "sc", textContent: "+" + mine.score }) : h("span", { className: "tiny", textContent: "구경" }));
+    })))];
+}
+
+/* ---------- 탭: 순위 ---------- */
+function rankView() {
+  if (!state?.order?.length) return [h("div", { className: "card" }, h("h2", { textContent: "아직 순위가 없어요" }), h("p", { className: "sub", textContent: "첫 손님을 응대하면 누적 점수가 쌓여요." }))];
+  const mine = rounds.filter((r) => r.gameId === state.gameId);
+  const stat = (id) => {
+    const turns = mine.flatMap((r) => (r.results || []).filter((x) => x.player === id));
+    const lines = turns.flatMap((x) => (x.msgs || []).filter((m) => m.f === "p" && m.g != null));
+    return { n: turns.length, happy: turns.filter((x) => x.endedBy === "happy").length, boom: turns.filter((x) => x.endedBy === "boom").length,
+      avg: lines.length ? Math.round(lines.reduce((a, m) => a + m.g, 0) / lines.length * 10) / 10 : 0 };
+  };
+  const ids = [...state.order].sort((a, b) => (state.scores?.[b] || 0) - (state.scores?.[a] || 0));
+  ensureProfiles(ids);
+  return [h("div", { className: "card tight" },
+    h("h3", { textContent: `🏆 누적 순위 · 손님 ${state.round}명째` }),
+    h("div", { className: "list" }, ids.map((id, i) => {
+      const s = stat(id);
+      return h("div", { className: "li" }, h("span", { className: "no" + (i === 0 ? " gold" : ""), textContent: i + 1 }), avatar(id),
+        h("div", { className: "txt" }, h("b", { textContent: nameOf(id) }), h("span", { textContent: `응대 ${s.n}번 · 한마디 평균 ${s.avg}점 · 만족 ${s.happy} · 폭발 ${s.boom}` })),
+        h("span", { className: "sc", textContent: (state.scores?.[id] || 0) + "점" }));
+    })),
+    h("p", { className: "tiny", textContent: "점수 = 한마디마다 받은 응대 점수 합 + 만족 퇴장 30 + 리액션 보너스(최대 20)" }))];
+}
+
+/* ---------- 렌더 ---------- */
+function renderTop() {
+  const n = pastRounds().length;
+  $("tabs").replaceChildren(...[["now", "지금 가게"], ["past", "지난 손님"], ["rank", "순위"]].map(([k, label]) =>
+    h("button", { className: "tab" + (tab === k ? " on" : ""), ariaPressed: String(tab === k), onclick: () => { tab = k; pastOpen = null; render(); if (k === "now" && isResponder()) stickBottom(true); } },
+      label, k === "past" && n ? h("small", { textContent: n }) : null)));
+  $("tabs").hidden = !state && !rounds.length;
+  const ids = [...onlineIds()];
+  const fold = !isHost() || !state ? [] : confirmFold
+    ? [h("span", { textContent: "가게를 닫을까요?" }),
+       h("button", { className: "btn rust on", textContent: "닫기", onclick: () => { confirmFold = false; guard(() => db.doc("game/state").delete()); } }),
+       h("button", { className: "btn", textContent: "취소", onclick: () => { confirmFold = false; render(); } })]
+    : [h("button", { className: "btn text", textContent: "가게 닫기", onclick: () => { confirmFold = true; render(); } })];
+  $("online").replaceChildren(...(room && ids.length ? [h("span", { className: "faces" }, ids.slice(0, 4).map((id) => avatar(id))), `${ids.length}명`] : []), ...fold);
+}
+function render() {
+  renderTop();
+  const view = $("view");
+  const focused = document.activeElement?.id;
+  const typed = Object.fromEntries([...view.querySelectorAll("input,textarea")].map((el) => [el.id, el.value]));
+  const opened = new Map([...view.querySelectorAll("details[id]")].map((d) => [d.id, d.open]));
+  const wasNear = nearBottom();
+  view.replaceChildren(...(tab === "past" ? pastView() : tab === "rank" ? rankView() : nowView()));
+  for (const [id, val] of Object.entries(typed)) { const el = $(id); if (el && val && !el.readOnly) el.value = val; }
+  for (const d of view.querySelectorAll("details[id]")) if (opened.has(d.id)) d.open = opened.get(d.id);
+  if (focused && $(focused) && !$(focused).disabled) $(focused).focus({ preventScroll: true });
+  if (tab === "now" && state?.turn?.status === "live" && (wasNear || isResponder())) stickBottom(true);
+  ensureProfiles([...onlineIds()]);
+}
+render();
+</script>

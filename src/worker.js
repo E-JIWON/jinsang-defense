@@ -20,13 +20,18 @@ export default {
 async function ask(env, kind, prompt, turn) {
   const local = /localhost|127\.0\.0\.1|trycloudflare|ngrok/.test(env.LLM_BASE_URL || "");
   if (!env.LLM_API_KEY && !local) return fakeAnswer(kind, turn);
-  const res = await fetch(env.LLM_BASE_URL.replace(/\/$/, "") + "/chat/completions", {
-    method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${env.LLM_API_KEY || "local"}` },
-    body: JSON.stringify({ model: env.LLM_MODEL, messages: [{ role: "user", content: prompt }], response_format: { type: "json_object" }, temperature: 0.9 }),
-    signal: AbortSignal.timeout(60000),
-  });
-  if (!res.ok) throw new Error(`AI 오류 ${res.status}: ${(await res.text()).slice(0, 160)}`);
+  const models = [env.LLM_MODEL, env.LLM_FALLBACK_MODEL].filter(Boolean);
+  let res;
+  for (const model of models) {
+    res = await fetch(env.LLM_BASE_URL.replace(/\/$/, "") + "/chat/completions", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${env.LLM_API_KEY || "local"}` },
+      body: JSON.stringify({ model, messages: [{ role: "user", content: prompt }], response_format: { type: "json_object" }, temperature: 0.9 }),
+      signal: AbortSignal.timeout(60000),
+    });
+    if (res.status !== 429 && res.status !== 503) break; // 혼잡·한도면 다음 모델로
+  }
+  if (!res.ok) throw new Error(res.status === 429 ? "오늘 무료 AI 한도를 다 썼어요." : res.status === 503 ? "AI가 지금 붐벼요. 잠시 뒤 다시 해 주세요." : `AI 오류 ${res.status}`);
   const j = await res.json();
   return parseJson(j.choices?.[0]?.message?.content);
 }
