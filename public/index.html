@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>진상 손님 버티기</title>
+<meta name="description" content="AI가 연기하는 진상 손님을 친구들과 돌아가며 2분씩 달래는 멀티플레이 게임">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+html, body { margin: 0 }
+img { max-width: 100% }
+[hidden] { display: none !important }
+
+/* layout: 상단 탭(지금 가게·지난 손님·순위) / 손님 바(위 고정) + 대화방 한 줄기 + 입력 도크(아래 고정)
+   tokens: bongchil-design-system 이식 */
+:root {
+  --surface: #ffffff; --surface-warm: #fafaf8; --surface-subtle: #f5f4f0;
+  --ink: #141210; --ink-2: #3b3730; --ink-3: #6b6558; --ink-4: #9c9588; --ink-5: #c8c2b6;
+  --primary: #5a8268; --primary-subtle: rgba(90,130,104,.08); --primary-light: #e3efe7;
+  --secondary: #b5612a; --danger: #c2607a; --sand: #c8a050; --sky: #50aac8;
+  --border: rgba(20,18,16,.07); --border-strong: rgba(20,18,16,.12);
+  --radius-s: 6px; --radius-m: 10px; --radius-l: 16px;
+  --shadow-ink: 60 55 45;
+  --shadow-s: 0 1px 3px rgba(20,18,16,.04); --shadow-m: 0 4px 16px rgba(20,18,16,.06); --shadow-l: 0 16px 48px rgba(20,18,16,.1);
+  --accent-rgb: 90 130 104;
+  --desk-glow: rgb(var(--accent-rgb) / .25);
+  --desk-bg: radial-gradient(1100px 620px at 16% 8%, var(--desk-glow), transparent 68%), linear-gradient(160deg, #f7f5f0, #efe9df);
+  --desk: #eae7df;
+  --glass-mix: 84%;
+  --aura-tint: #ffffff; --aura-text: #241e18; --grain-opacity: .5;
+  --aura-idle-tint: #ffffff; --aura-idle-mix: 34%; --aura-idle-shadow: rgb(60 55 45 / .06); --aura-idle-ring: transparent;
+  --aura-glow: 40%;
+  --font: "Pretendard", "Pretendard Variable", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Spoqa Han Sans Neo", "Malgun Gothic", system-ui, sans-serif;
+  --serif: "Nanum Myeongjo", "AppleMyungjo", "Batang", serif;
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+/* 라이트 고정 (요청) */
+:root { color-scheme: light }
+* { box-sizing: border-box }
+[hidden] { display: none !important }
+html, body { min-height: 100% }
+body { background: var(--desk); background-image: var(--desk-bg); background-attachment: fixed; color: var(--ink); font: 15px/1.6 var(--font); letter-spacing: -0.01em; padding: 0 16px 56px; -webkit-font-smoothing: antialiased }
+.app { max-width: 1024px; margin: 0 auto; display: grid; gap: 20px }
+
+/* ── 상단 바 ── */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; padding-block: 14px; }
+.top::before { content: ""; position: absolute; inset: 0 -16px; background: color-mix(in srgb, var(--desk) 70%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); z-index: -1 }
+.brand { font-weight: 800; font-size: 16px; letter-spacing: -0.03em; display: flex; align-items: center; gap: 8px }
+.brand i { font-style: normal; display: grid; place-items: center; width: 28px; height: 28px; border-radius: var(--radius-m); background: var(--primary-light); color: var(--primary); font-size: 15px }
+.steps { display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: color-mix(in srgb, var(--surface) 60%, transparent); border: 1px solid var(--border) }
+.step { font-size: 12px; font-weight: 600; color: var(--ink-4); padding: 4px 11px; border-radius: 999px; white-space: nowrap }
+.step.done { color: var(--ink-3) }
+.step.on { color: color-mix(in oklab, var(--primary) 62%, var(--aura-text)); background: radial-gradient(130% 150% at center, color-mix(in srgb, var(--primary) 40%, var(--aura-tint)), color-mix(in srgb, var(--primary) 18%, transparent) 72%); box-shadow: 0 2px 10px color-mix(in srgb, var(--primary) 20%, transparent) }
+.online { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-3) }
+.faces { display: flex }
+.faces img { margin-left: -6px; border: 2px solid var(--desk) }
+.faces img:first-child { margin-left: 0 }
+
+/* ── 본문 그리드 ── */
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: start }
+.main.solo { grid-template-columns: minmax(0, 640px); justify-content: center }
+@media (max-width: 820px) { .main, .main.solo { grid-template-columns: minmax(0, 1fr) } }
+.side { display: grid; gap: 14px; min-width: 0 }
+
+/* ── 재질: 베이직 글라스 카드 ── */
+.card { background: color-mix(in srgb, var(--surface) var(--glass-mix), transparent); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); border: 1px solid var(--border); border-radius: var(--radius-l); box-shadow: var(--shadow-m); padding: 22px; display: grid; gap: 14px; min-width: 0 }
+.card.tight { padding: 16px; gap: 10px }
+.eyebrow { font-size: 12px; font-weight: 700; color: var(--primary); letter-spacing: .02em }
+h1, h2, h3 { margin: 0; text-wrap: balance; letter-spacing: -0.03em }
+h1 { font-size: clamp(28px, 5vw, 38px); font-weight: 800; line-height: 1.15 }
+h2 { font-size: 22px; font-weight: 800; line-height: 1.3 }
+h3 { font-size: 15px; font-weight: 700 }
+p { margin: 0 }
+.sub { color: var(--ink-3); font-size: 14px }
+.tiny { color: var(--ink-4); font-size: 12px }
+.err { color: var(--danger); font-size: 13px; font-weight: 600 }
+hr { border: 0; border-top: 1px dashed var(--border-strong); margin: 2px 0; width: 100% }
+
+/* ── 재질: 그레인 오라 버튼 ── */
+.btn { --c: var(--ink-2); position: relative; isolation: isolate; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 15px; border: 0; border-radius: var(--radius-m); font: 600 13px var(--font); letter-spacing: -0.01em; cursor: pointer; white-space: nowrap;
+  color: var(--c);
+  background: radial-gradient(130% 150% at center, color-mix(in srgb, var(--c) var(--aura-idle-mix), var(--aura-idle-tint)), color-mix(in srgb, var(--surface) 20%, transparent) 78%);
+  box-shadow: 0 1px 6px var(--aura-idle-shadow), inset 0 0 0 1px var(--aura-idle-ring);
+  transition: transform .15s cubic-bezier(.34,1.56,.64,1), box-shadow .2s }
+.btn::after { content: ""; position: absolute; inset: 0; z-index: -1; background-image: var(--grain); background-size: 70px 70px; mix-blend-mode: screen; opacity: var(--grain-opacity); pointer-events: none; -webkit-mask-image: radial-gradient(ellipse at center, #000 0%, rgba(0,0,0,.55) 45%, transparent 85%); mask-image: radial-gradient(ellipse at center, #000 0%, rgba(0,0,0,.55) 45%, transparent 85%) }
+.btn:active:not(:disabled) { transform: scale(.95) }
+.btn.on { color: color-mix(in oklab, var(--c) 62%, var(--aura-text)); background: radial-gradient(130% 150% at center, color-mix(in srgb, var(--c) 78%, var(--aura-tint)), color-mix(in srgb, var(--c) 34%, transparent) 72%); box-shadow: 0 3px 16px color-mix(in srgb, var(--c) var(--aura-glow), transparent) }
+.btn.primary { --c: var(--primary) }
+.btn.rust { --c: var(--secondary) }
+.btn.lg { height: 50px; padding: 0 24px; font-size: 16px; font-weight: 700; border-radius: var(--radius-l); width: 100% }
+.btn.text { background: none; box-shadow: none; height: auto; padding: 2px 0; color: var(--ink-3); text-decoration: underline; text-underline-offset: 3px }
+.btn.text::after { display: none }
+.btn:disabled { opacity: .45; cursor: default }
+.btn:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center }
+
+/* ── 입력 ── */
+.field { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: var(--ink-2) }
+input, textarea { font: 15px/1.5 var(--font); color: var(--ink); background: var(--surface-warm); border: 1px solid var(--border-strong); border-radius: var(--radius-m); padding: 11px 13px; width: 100% }
+textarea { resize: vertical; min-height: 96px; font-size: 16px }
+input::placeholder, textarea::placeholder { color: var(--ink-4) }
+
+/* ── 홈: 방법 ── */
+.how { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; counter-reset: s }
+@media (max-width: 560px) { .how { grid-template-columns: minmax(0, 1fr) } }
+.how li { counter-increment: s; background: var(--surface-subtle); border-radius: var(--radius-m); padding: 12px 14px; font-size: 13px; color: var(--ink-3) }
+.how li::before { content: counter(s); display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--primary-light); color: var(--primary); font: 700 11px var(--font); margin-bottom: 6px }
+.how b { display: block; color: var(--ink); font-size: 14px }
+.seg { display: inline-flex; gap: 6px }
+
+/* ── 사람 ── */
+.av { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; background: var(--surface-subtle); flex: none }
+.av.sm { width: 20px; height: 20px }
+.people { display: grid; gap: 4px }
+.person { display: flex; align-items: center; gap: 10px; padding: 8px 6px; border-radius: var(--radius-m); min-width: 0 }
+.person + .person { border-top: 1px solid var(--border) }
+.person .who { min-width: 0; flex: 1; display: grid; line-height: 1.35 }
+.person .who b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.person .who span { font-size: 12px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-5); flex: none }
+.dot.on { background: var(--primary); box-shadow: 0 0 0 3px var(--primary-subtle) }
+.badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--surface-subtle); color: var(--ink-3); white-space: nowrap }
+.badge.ok { background: var(--primary-light); color: var(--primary) }
+.badge.host { background: color-mix(in srgb, var(--sand) 22%, transparent); color: color-mix(in oklab, var(--sand) 60%, var(--ink)) }
+.badge.ghost { background: color-mix(in srgb, var(--danger) 14%, transparent); color: var(--danger) }
+
+/* ── 초대 ── */
+.invite ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 13px; color: var(--ink-2) }
+.invite b { color: var(--ink) }
+.linkbox { display: flex; gap: 6px }
+.linkbox input { font: 12px var(--mono); padding: 8px 10px; min-width: 0 }
+
+/* ── 토스트 ── */
+.toasts { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 70px); transform: translateX(-50%); display: grid; gap: 8px; z-index: 50; pointer-events: none; width: max-content; max-width: calc(100% - 32px) }
+.toast { background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(8px); border: 1px solid var(--border); box-shadow: var(--shadow-l), 0 4px 18px color-mix(in srgb, var(--primary) 18%, transparent); border-radius: 999px; padding: 9px 16px; font-size: 13px; font-weight: 600; animation: toastIn .45s cubic-bezier(.34,1.56,.64,1) both }
+@keyframes toastIn { from { opacity: 0; transform: translateY(-10px) scale(.9) } }
+.empty { text-align: center; color: var(--ink-4); font-size: 13px; padding: 18px; border: 1.5px dashed var(--border-strong); border-radius: var(--radius-m) }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important } }
+
+/* ── 진상 손님: 한 화면 한 대화방 ── */
+.app { max-width: 720px }
+.top { position: relative }
+.top::before { display: none }
+.tabs { display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: color-mix(in srgb, var(--surface) 60%, transparent); border: 1px solid var(--border) }
+.tab { border: 0; background: none; font: 600 13px var(--font); color: var(--ink-3); padding: 5px 13px; border-radius: 999px; cursor: pointer; white-space: nowrap }
+.tab small { font-size: 11px; color: var(--ink-4); margin-left: 3px }
+.tab.on { color: color-mix(in oklab, var(--primary) 62%, var(--aura-text)); background: radial-gradient(130% 150% at center, color-mix(in srgb, var(--primary) 40%, var(--aura-tint)), color-mix(in srgb, var(--primary) 18%, transparent) 72%) }
+.tab:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px }
+#view { display: grid; gap: 14px; min-width: 0 }
+.skel { display: grid; gap: 10px }
+.skel i { display: block; height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--surface-subtle), var(--border-strong), var(--surface-subtle)); background-size: 200% 100%; animation: shimmer 1.4s linear infinite }
+@keyframes shimmer { to { background-position: -200% 0 } }
+
+/* 손님 바 (위에 고정) */
+.custbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: color-mix(in srgb, var(--surface) var(--glass-mix), transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid var(--border); border-radius: var(--radius-l); box-shadow: var(--shadow-m); padding: 10px 12px; display: grid; gap: 8px }
+.cb-row { display: flex; gap: 11px; align-items: center; cursor: pointer; border: 0; background: none; padding: 0; text-align: left; font: inherit; color: inherit; width: 100% }
+.cb-face { width: 40px; height: 40px; flex: none; border-radius: 12px; display: grid; place-items: center; background: color-mix(in srgb, var(--mood) 18%, var(--surface)); color: var(--mood); transition: background .4s, color .4s }
+.cb-face svg { width: 23px; height: 23px; stroke-width: 1.8 }
+.cb-face.shake { animation: shake .45s }
+@keyframes shake { 20% { transform: translateX(-4px) rotate(-5deg) } 40% { transform: translateX(4px) rotate(4deg) } 60% { transform: translateX(-3px) } 80% { transform: translateX(2px) } }
+.cb-main { flex: 1; min-width: 0; display: grid; gap: 5px }
+.cb-top { display: flex; align-items: baseline; gap: 8px; min-width: 0 }
+.cb-name { font-weight: 800; font-size: 15px; letter-spacing: -0.02em; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.clock { font: 800 16px var(--mono); font-variant-numeric: tabular-nums }
+.clock.low { color: var(--danger) } .clock.paused { color: var(--ink-4) }
+.meter { height: 6px; border-radius: 3px; background: var(--surface-subtle); overflow: hidden }
+.meter i { display: block; height: 100%; border-radius: 3px; background: var(--mood); transition: width .7s cubic-bezier(.34,1.56,.64,1), background .4s }
+.who-tag { flex: none; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: color-mix(in srgb, var(--secondary) 14%, transparent); color: var(--secondary) }
+.who-tag.me { background: var(--primary-light); color: var(--primary) }
+.meter-row { display: flex; align-items: center; gap: 8px }
+.meter-row .meter { flex: 1 }
+.anger { font: 700 12px var(--font); color: var(--mood); font-variant-numeric: tabular-nums; white-space: nowrap }
+.role { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-3); border-top: 1px solid var(--border); padding-top: 8px; min-width: 0 }
+.role-txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.role-txt b { color: var(--ink) }
+.cb-sub { font-size: 12px; color: var(--ink-4); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.cb-chev { color: var(--ink-4); transition: transform .2s }
+.cb-chev svg { width: 16px; height: 16px }
+.custbar.open .cb-chev { transform: rotate(180deg) }
+.cb-more { display: grid; gap: 6px; padding: 4px 2px 2px; border-top: 1px dashed var(--border-strong); padding-top: 9px; font-size: 13.5px; color: var(--ink-2); line-height: 1.55 }
+.tags { display: flex; flex-wrap: wrap; gap: 5px }
+.tag { font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--surface-subtle); color: var(--ink-3) }
+
+/* 대화방 */
+.thread { display: grid; gap: 9px; align-content: start; padding: 6px 2px 4px; position: relative; min-height: 120px }
+.sep { display: flex; align-items: center; gap: 10px; font-size: 12px; font-weight: 600; color: var(--ink-4); margin-top: 8px; min-width: 0 }
+.sep::before, .sep::after { content: ""; flex: 1; height: 1px; background: var(--border-strong); min-width: 12px }
+.sep span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 85% }
+.sep b { color: var(--ink-2) }
+.sep .plus { color: var(--primary) }
+.fold { justify-self: center; font: 600 12px var(--font); color: var(--ink-3); background: var(--surface-subtle); border: 0; border-radius: 999px; padding: 4px 12px; cursor: pointer }
+.sys { justify-self: center; font-size: 13px; color: var(--ink-3); text-align: center; padding: 6px 0 }
+.msg { display: grid; gap: 4px; max-width: 82%; min-width: 0 }
+.msg.c { justify-self: start }
+.msg.p { justify-self: end; justify-items: end }
+.bubble { padding: 9px 13px; border-radius: 16px; font-size: 15px; line-height: 1.6; overflow-wrap: anywhere }
+.msg.c .bubble { background: var(--surface); border: 1px solid var(--border); border-bottom-left-radius: 4px }
+.msg.p .bubble { background: var(--primary-light); color: color-mix(in oklab, var(--primary) 55%, var(--ink)); border-bottom-right-radius: 4px }
+.meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px }
+.act { color: var(--ink-4); font-style: italic }
+.thought { display: inline-flex; gap: 4px; align-items: center; color: var(--secondary) }
+.thought svg { width: 12px; height: 12px }
+.grade { font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--surface-subtle); color: var(--ink-3); font-variant-numeric: tabular-nums }
+.grade.good { background: var(--primary-light); color: var(--primary) }
+.grade.bad { background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger) }
+.dots span { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--ink-4); margin: 0 2px; animation: dot 1s infinite }
+.dots span:nth-child(2) { animation-delay: .15s } .dots span:nth-child(3) { animation-delay: .3s }
+@keyframes dot { 50% { transform: translateY(-4px); opacity: .5 } }
+.floaty { position: absolute; bottom: 0; font-size: 26px; pointer-events: none; animation: floaty 1.8s ease-out forwards }
+@keyframes floaty { to { transform: translateY(-180px) scale(1.4); opacity: 0 } }
+
+/* 리뷰 (대화방 안) */
+.reviewbox { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-l); padding: 14px; display: grid; gap: 10px; margin-top: 6px }
+.reviewbox .hd { font-size: 15px; font-weight: 800; letter-spacing: -0.02em }
+.rv { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; padding-top: 10px; border-top: 1px solid var(--border) }
+.rv .stars { color: var(--sand); font-size: 13px; letter-spacing: 1px }
+.rv p { grid-column: 2 / 4; font-size: 13.5px; color: var(--ink-2); line-height: 1.55 }
+.sc { font: 800 15px var(--mono); font-variant-numeric: tabular-nums }
+
+/* 아래 입력 도크 (아래에 고정) */
+.dock { position: sticky; bottom: 0; z-index: 5; padding: 8px 0 calc(10px + env(safe-area-inset-bottom, 0px)); background: linear-gradient(to top, var(--desk) 65%, transparent) }
+.dock .panel { background: color-mix(in srgb, var(--surface) var(--glass-mix), transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid var(--border); border-radius: var(--radius-l); box-shadow: var(--shadow-m); padding: 8px; display: grid; gap: 6px }
+.dock .line { display: flex; gap: 8px; align-items: center; min-width: 0 }
+.dock textarea { border: 0; background: transparent; min-height: 42px; height: 42px; resize: none; padding: 10px 8px; font-size: 15px }
+.dock textarea:focus-visible { outline: none }
+.dock .hint { font-size: 12.5px; color: var(--ink-3); padding: 0 6px; flex: 1; min-width: 0 }
+.dock .react .btn { height: 38px; font-size: 18px; padding: 0 12px }
+.dock input { padding: 9px 11px; font-size: 14px }
+
+/* 목록 (지난 손님 · 순위 · 대기실) */
+.list { display: grid }
+.li { display: flex; align-items: center; gap: 12px; padding: 11px 4px; border: 0; border-top: 1px solid var(--border); background: none; font: inherit; color: inherit; text-align: left; width: 100%; min-width: 0 }
+.li:first-child { border-top: 0 }
+button.li { cursor: pointer; border-radius: 0 }
+button.li:hover { background: var(--surface-subtle) }
+.li .ico { width: 34px; height: 34px; flex: none; border-radius: 10px; display: grid; place-items: center; background: var(--surface-subtle); color: var(--ink-3) }
+.li .ico svg { width: 18px; height: 18px }
+.li .txt { flex: 1; min-width: 0; display: grid; line-height: 1.4 }
+.li .txt b { font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.li .txt span { font-size: 12.5px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.li .no { font: 800 15px var(--mono); color: var(--ink-4); width: 22px; text-align: center }
+.li:first-child .no.gold { color: var(--sand) }
+.back { justify-self: start }
+details.howto > summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--ink-3); list-style: none }
+details.howto > summary::-webkit-details-marker { display: none }
+details.howto ol { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 4px; font-size: 13px; color: var(--ink-2) }
+.ic svg { width: 1em; height: 1em; vertical-align: -0.12em }
+
+/* ── 사이트판 추가 ── */
+.av { display: inline-grid; place-items: center; color: #fff; font: 700 11px var(--font); background: var(--c, var(--ink-4)); overflow: hidden }
+.av.sm { font-size: 9.5px }
+.join { display: grid; gap: 12px }
+.code { font: 800 22px var(--mono); letter-spacing: .12em }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <a class="brand" href="/" style="color:inherit;text-decoration:none"><i id="brand-ic">!</i>진상 손님 버티기</a>
+    <nav class="tabs" id="tabs" aria-label="화면" hidden></nav>
+    <div class="online" id="online"></div>
+  </header>
+  <main id="view"><div class="card"><p class="sub">가게 문 여는 중…</p></div></main>
+</div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<script>
+const TURN_MS = 120000, MAX_LINES = 10;
+const REACTS = ["🔥", "😂", "💀", "👏"];
+const OUTCOME = { happy: ["🙂", "만족 퇴장"], boom: ["🤯", "손님 폭발"], time: ["⏰", "시간 종료"], lines: ["💬", "대화 한도"], skip: ["🚪", "자리 비움"] };
+const COLORS = ["#4a7c59", "#50aac8", "#c8a050", "#c86e82", "#b47850", "#7f77dd", "#5a544e"];
+const $ = (id) => document.getElementById(id);
+function h(tag, props = {}, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "style") el.style.cssText = v;
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else if (v !== false && v != null) el[k] = v;
+  }
+  for (const c of kids.flat()) if (c != null && c !== false) el.append(c);
+  return el;
+}
+const pascal = (n) => n.split("-").map((w) => w[0].toUpperCase() + w.slice(1)).join("");
+function icon(name, fallback = "") {
+  const node = window.lucide?.icons?.[pascal(name)];
+  return node ? window.lucide.createElement(node) : document.createTextNode(fallback);
+}
+const mood = (a) => `hsl(${Math.round(140 - a * 1.35)} 45% 45%)`;
+const faceOf = (a) => (a < 20 ? "laugh" : a < 40 ? "smile" : a < 60 ? "meh" : a < 80 ? "frown" : "angry");
+const fmt = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
+const staffOf = (c) => c?.staff || `${c?.place || "가게"} 직원`;
+const goalOf = (c) => c?.goal || "손님 분노를 낮춰서 웃으며 돌려보내기";
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const store = { get: (k) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
+
+/* ---------- 나 · 방 ---------- */
+const me = store.get("jinsang-id") || (crypto.randomUUID?.() || String(Math.random()).slice(2));
+store.set("jinsang-id", me);
+let nick = store.get("jinsang-nick") || "";
+const code = (location.pathname.match(/^\/r\/([A-Za-z0-9]{4,8})/) || [])[1]?.toUpperCase() || null;
+const roomUrl = () => `${location.origin}/r/${code}`;
+
+let ws = null, g = null, online = [], errMsg = "", connected = false, retry = 0;
+let tab = "now", pastOpen = null, custOpen = false, customIdea = "", confirmFold = false, lastAnimated = "";
+const expanded = new Set();
+
+function connect() {
+  ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/${code}`);
+  ws.onopen = () => { connected = true; retry = 0; ws.send(JSON.stringify({ type: "hello", id: me, nick })); };
+  ws.onmessage = (ev) => {
+    const m = JSON.parse(ev.data);
+    if (m.type === "state") {
+      const prev = g; g = m.g; online = m.online; errMsg = "";
+      const t = g.turn, pt = prev?.turn;
+      if (t && pt && t.player === pt.player && t.anger > pt.anger + 9) setTimeout(shakeFace, 50);
+      if (t?.status === "done" && pt?.status === "live" && t.player === pt.player) toast(`${OUTCOME[t.endedBy]?.[0] || ""} ${nameOf(t.player)} 응대 끝 · +${t.score}`);
+      if (t?.status === "live" && pt?.status !== "live" && t.player !== me) toast(`🛎 ${nameOf(t.player)}님 응대 시작`);
+      if (prev) for (const id of online) if (!prev._online?.includes(id) && id !== me) toast(`👋 ${nameOf(id)}님이 들어왔어요`);
+      g._online = online;
+      render();
+    } else if (m.type === "react") floaty(m.e);
+    else if (m.type === "error") { errMsg = m.msg; render(); }
+  };
+  ws.onclose = () => { connected = false; render(); setTimeout(connect, Math.min(8000, 500 * 2 ** retry++)); };
+}
+const act = (type, extra = {}) => { if (ws?.readyState === 1) ws.send(JSON.stringify({ type, ...extra })); };
+
+/* ---------- 파생 ---------- */
+const isHost = () => g?.hostId === me;
+const current = () => g?.order?.[g.turnIdx];
+const isResponder = () => g?.turn?.player === me && g.turn.status === "live";
+const nameOf = (id) => (id === me ? "나" : g?.players?.[id]?.nick || "누군가");
+function avatar(id, cls = "av") {
+  const n = g?.players?.[id]?.nick || "?";
+  let x = 0; for (const c of id || "") x = (x * 31 + c.charCodeAt(0)) >>> 0;
+  return h("span", { className: cls, style: `--c:${COLORS[x % COLORS.length]}`, textContent: [...n][0] || "?", ariaHidden: "true" });
+}
+function remaining(t = g?.turn) {
+  if (!t?.clock) return TURN_MS;
+  return TURN_MS - t.clock.spent - (t.clock.resumeAt ? Date.now() - t.clock.resumeAt : 0);
+}
+const pastRounds = () => (g?.rounds || []).filter((r) => !(r.round === g.round && ["playing", "review", "reviewing"].includes(g.phase))).sort((a, b) => (b.at || 0) - (a.at || 0));
+
+/* ---------- 연출 ---------- */
+function toast(text) { const t = h("div", { className: "toast", textContent: text }); $("toasts").append(t); setTimeout(() => t.remove(), 2800); }
+function floaty(e) {
+  const th = $("thread"); if (!th) return;
+  const f = h("span", { className: "floaty", textContent: e, style: `left:${10 + Math.random() * 80}%` });
+  th.append(f); setTimeout(() => f.remove(), 1900);
+}
+function shakeFace() { const f = $("face"); if (!f) return; f.classList.remove("shake"); void f.offsetWidth; f.classList.add("shake"); }
+const nearBottom = () => window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 220;
+function stickBottom(force) { if (!force && !nearBottom()) return; requestAnimationFrame(() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: reduced ? "auto" : "smooth" })); }
+setInterval(() => {
+  const el = $("clock"), t = g?.turn;
+  if (!el || t?.status !== "live") return;
+  const r = remaining(t);
+  el.textContent = fmt(r);
+  el.className = "clock" + (t.thinking ? " paused" : r < 15000 ? " low" : "");
+}, 250);
+
+/* ---------- 조각 ---------- */
+const errEl = () => (errMsg || g?.lastError ? h("p", { className: "err", textContent: errMsg || g.lastError }) : null);
+function hostAwayRow() {
+  const away = g && !online.includes(g.hostId) && !isHost() && g.players?.[me]?.staff;
+  return away ? h("div", { className: "line" }, h("span", { className: "hint", textContent: `가게 주인 ${nameOf(g.hostId)}님이 자리를 비웠어요.` }), h("button", { className: "btn rust", textContent: "내가 맡을게요", onclick: () => act("takeHost") })) : null;
+}
+function custBar(c, anger, sub, clock) {
+  return h("div", { className: "custbar" + (custOpen ? " open" : ""), style: `--mood:${mood(anger)}` },
+    h("button", { className: "cb-row", ariaExpanded: String(custOpen), onclick: () => { custOpen = !custOpen; render(); } },
+      h("div", { className: "cb-face", id: clock ? "face" : null }, icon(faceOf(anger), "😠")),
+      h("div", { className: "cb-main" },
+        h("div", { className: "cb-top" }, h("span", { className: "who-tag", textContent: "손님" }), h("span", { className: "cb-name", textContent: c.name }), clock),
+        h("div", { className: "meter-row" }, h("div", { className: "meter", title: `분노 ${anger}` }, h("i", { style: `width:${anger}%` })), h("span", { className: "anger", textContent: `분노 ${anger}` })),
+        h("div", { className: "cb-sub", textContent: sub })),
+      h("span", { className: "cb-chev" }, icon("chevron-down", "▾"))),
+    h("div", { className: "role" }, h("span", { className: "who-tag me", textContent: "내 역할" }),
+      h("span", { className: "role-txt" }, h("b", { textContent: staffOf(c) }), " · 목표: " + goalOf(c))),
+    custOpen ? h("div", { className: "cb-more" },
+      h("div", { className: "tags" }, h("span", { className: "tag", textContent: "📍 " + c.place }), (c.tags || []).map((t) => h("span", { className: "tag", textContent: t }))),
+      h("p", { textContent: c.situation })) : null);
+}
+function bubbles(msgs, animKey) {
+  return msgs.map((m, i) => {
+    if (m.f === "p") return h("div", { className: "msg p" }, h("div", { className: "bubble", textContent: m.t }),
+      m.g != null ? h("div", { className: "meta" }, h("span", { className: "grade" + (m.g >= 12 ? " good" : m.g <= 6 ? " bad" : ""), textContent: `+${m.g}${m.why ? " · " + m.why : ""}` })) : null);
+    const bubble = h("div", { className: "bubble" });
+    const meta = (m.act || m.thought) ? h("div", { className: "meta" },
+      m.act ? h("span", { className: "act", textContent: m.act }) : null,
+      m.thought ? h("span", { className: "thought" }, icon("message-circle", "💭"), m.thought) : null) : null;
+    const key = `${animKey}:${i}`;
+    if (animKey && i === msgs.length - 1 && i > 0 && lastAnimated !== key && !reduced) {
+      lastAnimated = key; if (meta) meta.hidden = true;
+      let n = 0; const tm = setInterval(() => { n++; bubble.textContent = m.t.slice(0, n); if (n % 12 === 0) stickBottom(); if (n >= m.t.length) { clearInterval(tm); if (meta) meta.hidden = false; stickBottom(); } }, 30);
+    } else bubble.textContent = m.t;
+    return h("div", { className: "msg c" }, bubble, meta);
+  });
+}
+const sep = (...kids) => h("div", { className: "sep" }, h("span", {}, ...kids));
+function doneTurn(r, key, openByDefault) {
+  const open = expanded.has(key) || (openByDefault && !expanded.has("x" + key));
+  const toggle = () => { if (open) { expanded.delete(key); expanded.add("x" + key); } else { expanded.add(key); expanded.delete("x" + key); } render(); };
+  return [
+    sep(avatar(r.player, "av sm"), h("b", { textContent: nameOf(r.player) }), `${OUTCOME[r.endedBy]?.[0] || ""} ${OUTCOME[r.endedBy]?.[1] || ""} ·`, h("span", { className: "plus", textContent: `+${r.score ?? 0}` })),
+    r.msgs?.length ? (open ? [...bubbles(r.msgs), h("button", { className: "fold", textContent: "접기", onclick: toggle })] : h("button", { className: "fold", textContent: `대화 ${r.msgs.length}개 보기`, onclick: toggle })) : null,
+  ].flat().filter(Boolean);
+}
+function reviewBox(rv, results) {
+  if (!rv) return null;
+  const byP = Object.fromEntries((results || []).map((r) => [r.player, r]));
+  const items = [...(rv.items || [])].sort((a, b) => (byP[b.player]?.score || 0) - (byP[a.player]?.score || 0));
+  return h("div", { className: "reviewbox" },
+    h("div", { className: "eyebrow", textContent: "손님 리뷰" }),
+    h("div", { className: "hd", textContent: rv.headline ? `“${rv.headline}”` : "" }),
+    items.map((it) => h("div", { className: "rv" },
+      avatar(it.player, "av sm"),
+      h("div", { style: "display:flex;gap:8px;align-items:center;min-width:0" }, h("b", { textContent: nameOf(it.player) }), h("span", { className: "stars", textContent: "★".repeat(it.stars) + "☆".repeat(5 - it.stars) })),
+      h("span", { className: "sc", textContent: "+" + (byP[it.player]?.score ?? 0) }),
+      h("p", { textContent: it.review }))));
+}
+
+/* ---------- 입구: 가게 열기 · 코드 입장 · 닉네임 ---------- */
+function homeView() {
+  const codeIn = h("input", { id: "code-in", maxLength: 8, placeholder: "방 코드 (예: K7QPX)", autocapitalize: "characters" });
+  return [h("div", { className: "card", style: "padding:28px;gap:18px" },
+    h("div", { className: "eyebrow", textContent: "멀티플레이 · 2~6명 · 로그인 없음" }),
+    h("h1", { textContent: "진상 손님,\n2분만 버티세요", style: "white-space:pre-line" }),
+    h("p", { className: "sub", textContent: "AI가 진상 손님을 연기해요. 한 명씩 돌아가며 2분 동안 말로 달래고, 나머지는 실시간으로 구경하며 리액션을 던져요." }),
+    h("ol", { className: "how" },
+      h("li", {}, h("b", { textContent: "가게 열기" }), "링크를 친구에게 보내요"),
+      h("li", {}, h("b", { textContent: "2분 응대" }), "한마디마다 응대 점수"),
+      h("li", {}, h("b", { textContent: "리뷰 공개" }), "별점과 리뷰, 누적 순위")),
+    h("button", { className: "btn primary on lg", textContent: "새 가게 열기", onclick: async () => {
+      const r = await fetch("/api/room", { method: "POST" }).then((x) => x.json()).catch(() => null);
+      if (r?.code) location.href = "/r/" + r.code; else { errMsg = "가게를 열지 못했어요. 다시 눌러 주세요."; render(); }
+    } }),
+    h("div", { className: "row" }, codeIn, h("button", { className: "btn", textContent: "코드로 입장", onclick: () => { const c = codeIn.value.trim().toUpperCase(); if (/^[A-Z0-9]{4,8}$/.test(c)) location.href = "/r/" + c; } })),
+    errEl())];
+}
+function nickView() {
+  const inp = h("input", { id: "nick-in", maxLength: 12, placeholder: "닉네임 (예: 봉칠)", value: nick });
+  const go = () => { const v = inp.value.trim(); if (!v) return; nick = v; store.set("jinsang-nick", v); connect(); render(); };
+  inp.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.isComposing) go(); });
+  return [h("div", { className: "card join" },
+    h("div", { className: "eyebrow", textContent: "가게 코드 " + code }),
+    h("h2", { textContent: "이 가게에서 뭐라고 불릴까요?" }),
+    inp, h("button", { className: "btn primary on lg", textContent: "입장", onclick: go }))];
+}
+
+/* ---------- 탭: 지금 가게 ---------- */
+function nowView() {
+  if (!g) return [h("div", { className: "card" }, h("p", { className: "sub", textContent: connected ? "가게 문 여는 중…" : "가게에 연결하는 중…" }))];
+  const v = g.phase;
+  if (v === "lobby") {
+    const joined = g.players[me]?.staff;
+    const ids = Object.entries(g.players).filter(([id, p]) => p.staff || online.includes(id)).sort((a, b) => a[1].joinedAt - b[1].joinedAt).map(([id]) => id);
+    const staff = ids.filter((id) => g.players[id].staff);
+    const inp = h("input", { id: "invite-link", readOnly: true, value: roomUrl(), onfocus: (e) => e.target.select() });
+    return [h("div", { className: "card" },
+      h("div", { className: "eyebrow", textContent: "대기실 · 가게 코드 " + code }),
+      h("h2", { textContent: joined ? "직원들이 모이는 중" : "이 가게에서 같이 일할래요?" }),
+      h("div", { className: "linkbox" }, inp, h("button", { className: "btn", textContent: "초대 링크 복사", onclick: () => { navigator.clipboard?.writeText(roomUrl()).then(() => toast("🔗 링크를 복사했어요. 친구에게 보내세요"), () => inp.select()) ?? inp.select(); } })),
+      h("div", { className: "list" }, ids.map((id) => h("div", { className: "li" }, avatar(id), h("div", { className: "txt" }, h("b", { textContent: nameOf(id) })),
+        id === g.hostId ? h("span", { className: "badge host", textContent: "👑 주인" }) : null,
+        h("span", { className: "badge" + (g.players[id].staff ? " ok" : ""), textContent: g.players[id].staff ? "참가" : "구경 중" }),
+        h("span", { className: "dot" + (online.includes(id) ? " on" : "") })))),
+      !joined ? h("button", { className: "btn primary on lg", textContent: "직원으로 참가", onclick: () => act("join") }) : null,
+      isHost() ? h("label", { className: "field" }, "손님이 나타날 장소 (선택)", h("input", { id: "idea", maxLength: 60, placeholder: "비워두면 랜덤. 예) 우리 회사 탕비실", value: customIdea, oninput: (e) => { customIdea = e.target.value; } })) : null,
+      isHost() ? h("button", { className: "btn rust on lg", disabled: !staff.length, textContent: `첫 손님 받기 · 직원 ${staff.length}명`, onclick: () => act("newCustomer", { idea: customIdea }) })
+        : h("p", { className: "sub", textContent: `👑 ${nameOf(g.hostId)}님이 첫 손님을 받으면 시작돼요.` }),
+      hostAwayRow(), errEl())];
+  }
+  if (v === "customer" || v === "reviewing" || !g.customer) return [h("div", { className: "card" },
+    h("h2", { textContent: v === "reviewing" ? "손님이 리뷰를 쓰는 중…" : "딸랑, 손님이 들어오는 중…" }),
+    h("div", { className: "skel" }, h("i", { style: "width:70%" }), h("i", { style: "width:90%" }), h("i", { style: "width:55%" })),
+    h("p", { className: "tiny", textContent: "보통 몇 초 걸려요." }))];
+
+  const c = g.customer, t = g.turn, live = t?.status === "live";
+  const rs = g.roundResults || [], cur = current();
+  const anger = live ? t.anger : rs.at(-1)?.anger ?? c.anger;
+  const sub = live ? `${nameOf(t.player)} 응대 중 · 응대 점수 ${t.points || 0} · ${t.msgs.filter((m) => m.f === "p").length}/${MAX_LINES}마디`
+    : v === "review" ? `${g.round}번째 손님 · 리뷰 도착` : cur ? `${g.round}번째 손님 · 다음 차례 ${nameOf(cur)}` : `${g.round}번째 손님 · 모두 응대 끝`;
+  const clock = live ? h("span", { className: "clock" + (t.thinking ? " paused" : ""), id: "clock", textContent: fmt(remaining(t)) }) : null;
+
+  const thread = h("div", { className: "thread", id: "thread" });
+  rs.forEach((r, i) => thread.append(...doneTurn(r, `${g.round}:${i}`, !live && v === "playing" && i === rs.length - 1)));
+  if (live) {
+    thread.append(sep(avatar(t.player, "av sm"), h("b", { textContent: nameOf(t.player) }), "응대 중"), ...bubbles(t.msgs, `${g.round}:${t.player}`));
+    if (t.thinking) thread.append(h("div", { className: "msg c" }, h("div", { className: "bubble dots" }, h("span"), h("span"), h("span"))));
+    if (t.lastError) thread.append(h("p", { className: "sys", style: "color:var(--danger)", textContent: "⚠️ " + t.lastError }));
+  } else if (v === "playing") {
+    if (!rs.length) thread.append(h("p", { className: "sys", textContent: `🛎 ${c.name} 손님이 들어왔어요. 여러분은 ${staffOf(c)}예요. 목표: ${goalOf(c)}` }));
+    thread.append(h("p", { className: "sys", textContent: cur ? `다음 차례 · ${nameOf(cur)}` : "모두 응대했어요. 리뷰를 기다리는 중" }));
+  }
+  if (v === "review") thread.append(reviewBox(g.review, rs));
+  return [custBar(c, anger, sub, clock), thread, dock(v, t, live, cur)];
+}
+
+function dock(v, t, live, cur) {
+  const kids = [];
+  if (live && t.player === me) {
+    const ta = h("textarea", { id: "line", maxLength: 200, placeholder: "손님에게 할 말 (Enter로 보내기)", disabled: !!t.thinking,
+      onkeydown: (e) => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(); } } });
+    const send = () => { const val = ta.value.trim(); if (val) { ta.value = ""; act("say", { text: val }); stickBottom(true); } };
+    kids.push(h("div", { className: "line" }, ta, h("button", { className: "btn primary on", disabled: !!t.thinking, textContent: "말하기", onclick: send })));
+    kids.push(h("div", { className: "line" }, h("span", { className: "hint", textContent: t.thinking ? "손님이 생각하는 중… 시계가 멈춰 있어요." : "손님이 생각하는 동안엔 시계가 멈춰요." }), h("button", { className: "btn text", textContent: "그만하기", onclick: () => act("endTurn") })));
+  } else if (live) {
+    kids.push(h("div", { className: "line react" }, h("span", { className: "hint", textContent: `${nameOf(t.player)}님 응대 구경 중` }),
+      REACTS.map((e) => h("button", { className: "btn", textContent: e, ariaLabel: "리액션 " + e, onclick: () => act("react", { e }) }))));
+    if (isHost()) kids.push(h("div", { className: "line" }, h("span", { className: "hint", textContent: "진행이 멈췄다면" }), h("button", { className: "btn text", textContent: "이 차례 끝내기", onclick: () => act("endTurn") })));
+  } else if (v === "playing" && cur === me) {
+    kids.push(h("button", { className: "btn primary on lg", textContent: `내 차례 · ${staffOf(g.customer)}(으)로 응대 시작 (2분)`, onclick: () => act("start") }));
+  } else if (v === "playing" && cur) {
+    kids.push(h("div", { className: "line" }, h("span", { className: "hint", textContent: `${nameOf(cur)}님이 응대를 시작하길 기다리는 중` }), isHost() ? h("button", { className: "btn text", textContent: "건너뛰기", onclick: () => act("skip") }) : null));
+  } else if (v === "playing") {
+    kids.push(isHost() ? h("button", { className: "btn rust on lg", textContent: "손님 리뷰 보기", onclick: () => act("review") }) : h("span", { className: "hint", textContent: `${nameOf(g.hostId)}님이 리뷰를 열면 결과가 나와요.` }));
+  } else if (v === "review") {
+    kids.push(isHost()
+      ? h("div", { className: "line" }, h("input", { id: "idea2", maxLength: 60, placeholder: "다음 손님 장소 (비우면 랜덤)", value: customIdea, oninput: (e) => { customIdea = e.target.value; } }), h("button", { className: "btn rust on", textContent: "다음 손님", onclick: () => act("newCustomer", { idea: customIdea }) }))
+      : h("span", { className: "hint", textContent: `${nameOf(g.hostId)}님이 다음 손님을 받으면 이어져요.` }));
+    if (!g.players[me]?.staff) kids.push(h("button", { className: "btn primary", textContent: "다음 손님부터 직원으로 참가", onclick: () => act("join") }));
+  }
+  if (!g.players[me]?.staff && v === "playing") kids.push(h("div", { className: "line" }, h("span", { className: "hint", textContent: "다음 손님부터 같이 응대하려면" }), h("button", { className: "btn text", textContent: "직원으로 참가", onclick: () => act("join") })));
+  const away = hostAwayRow(); if (away) kids.push(away);
+  const err = errEl(); if (err) kids.push(err);
+  return h("div", { className: "dock" }, h("div", { className: "panel" }, kids));
+}
+
+/* ---------- 탭: 지난 손님 ---------- */
+function pastView() {
+  const list = pastRounds();
+  const r = pastOpen != null && (g?.rounds || []).find((x) => x.round === pastOpen);
+  if (r) {
+    const rs = r.results || [];
+    const thread = h("div", { className: "thread" });
+    rs.forEach((x, i) => thread.append(...doneTurn(x, `p${r.round}:${i}`, true)));
+    if (!rs.length) thread.append(h("p", { className: "sys", textContent: "응대 기록이 없어요." }));
+    if (r.review) thread.append(reviewBox(r.review, rs));
+    return [h("button", { className: "btn back", textContent: "← 지난 손님 목록", onclick: () => { pastOpen = null; render(); } }),
+      custBar(r.customer, rs.at(-1)?.anger ?? r.customer.anger, `${r.round}번째 손님 · 직원 ${rs.length}명 응대${r.review ? "" : " · 리뷰 전에 끝남"}`, null), thread];
+  }
+  if (!list.length) return [h("div", { className: "card" }, h("h2", { textContent: "아직 지난 손님이 없어요" }), h("p", { className: "sub", textContent: "응대가 하나 끝날 때마다 여기에 쌓여요. 손님을 눌러 그때 대화를 다시 볼 수 있어요." }))];
+  return [h("div", { className: "card tight" }, h("h3", { textContent: `지난 손님 ${list.length}명` }),
+    h("div", { className: "list" }, list.map((r) => {
+      const mine = (r.results || []).find((x) => x.player === me), last = (r.results || []).at(-1);
+      return h("button", { className: "li", onclick: () => { pastOpen = r.round; window.scrollTo(0, 0); render(); } },
+        h("div", { className: "ico", style: `color:${mood(last?.anger ?? r.customer?.anger ?? 50)}` }, icon(faceOf(last?.anger ?? 50), "🙂")),
+        h("div", { className: "txt" }, h("b", { textContent: r.customer?.name || "손님" }), h("span", { textContent: r.review?.headline ? `“${r.review.headline}”` : `${r.customer?.place || ""} · 직원 ${(r.results || []).length}명` })),
+        mine ? h("span", { className: "sc", textContent: "+" + mine.score }) : h("span", { className: "tiny", textContent: "구경" }));
+    })))];
+}
+
+/* ---------- 탭: 순위 ---------- */
+function rankView() {
+  const ids = Object.keys(g?.scores || {}).sort((a, b) => g.scores[b] - g.scores[a]);
+  if (!ids.length) return [h("div", { className: "card" }, h("h2", { textContent: "아직 순위가 없어요" }), h("p", { className: "sub", textContent: "첫 손님을 응대하면 누적 점수가 쌓여요." }))];
+  const stat = (id) => {
+    const turns = (g.rounds || []).flatMap((r) => (r.results || []).filter((x) => x.player === id));
+    const lines = turns.flatMap((x) => (x.msgs || []).filter((m) => m.f === "p" && m.g != null));
+    return { n: turns.length, happy: turns.filter((x) => x.endedBy === "happy").length, boom: turns.filter((x) => x.endedBy === "boom").length,
+      avg: lines.length ? Math.round(lines.reduce((a, m) => a + m.g, 0) / lines.length * 10) / 10 : 0 };
+  };
+  return [h("div", { className: "card tight" },
+    h("h3", { textContent: `🏆 누적 순위 · 손님 ${g.round}명째` }),
+    h("div", { className: "list" }, ids.map((id, i) => {
+      const s = stat(id);
+      return h("div", { className: "li" }, h("span", { className: "no" + (i === 0 ? " gold" : ""), textContent: i + 1 }), avatar(id),
+        h("div", { className: "txt" }, h("b", { textContent: nameOf(id) }), h("span", { textContent: `응대 ${s.n}번 · 한마디 평균 ${s.avg}점 · 만족 ${s.happy} · 폭발 ${s.boom}` })),
+        h("span", { className: "sc", textContent: g.scores[id] + "점" }));
+    })),
+    h("p", { className: "tiny", textContent: "점수 = 한마디마다 받은 응대 점수 합 + 만족 퇴장 30 + 리액션 보너스(최대 20)" }))];
+}
+
+/* ---------- 렌더 ---------- */
+function renderTop() {
+  const inRoom = code && g;
+  $("tabs").hidden = !inRoom;
+  if (inRoom) {
+    const n = pastRounds().length;
+    $("tabs").replaceChildren(...[["now", "지금 가게"], ["past", "지난 손님"], ["rank", "순위"]].map(([k, label]) =>
+      h("button", { className: "tab" + (tab === k ? " on" : ""), ariaPressed: String(tab === k), onclick: () => { tab = k; pastOpen = null; render(); if (k === "now" && isResponder()) stickBottom(true); } },
+        label, k === "past" && n ? h("small", { textContent: n }) : null)));
+  }
+  const fold = !inRoom || !isHost() ? [] : confirmFold
+    ? [h("span", { textContent: "가게를 정리할까요?" }),
+       h("button", { className: "btn rust on", textContent: "정리", onclick: () => { confirmFold = false; act("close"); } }),
+       h("button", { className: "btn", textContent: "취소", onclick: () => { confirmFold = false; render(); } })]
+    : [h("button", { className: "btn text", textContent: "가게 정리", title: "점수와 진행 중인 손님을 지우고 대기실로 (지난 손님 기록은 남아요)", onclick: () => { confirmFold = true; render(); } })];
+  $("online").replaceChildren(...(inRoom ? [h("span", { className: "faces" }, online.slice(0, 4).map((id) => avatar(id))), `${online.length}명`, connected ? null : h("span", { className: "err", textContent: "· 재연결 중" })] : []).filter(Boolean), ...fold);
+}
+function render() {
+  renderTop();
+  const view = $("view");
+  const focused = document.activeElement?.id;
+  const typed = Object.fromEntries([...view.querySelectorAll("input,textarea")].map((el) => [el.id, el.value]));
+  const wasNear = nearBottom();
+  view.replaceChildren(...(!code ? homeView() : !nick || !ws ? nickView() : tab === "past" ? pastView() : tab === "rank" ? rankView() : nowView()).filter(Boolean));
+  for (const [id, val] of Object.entries(typed)) { const el = $(id); if (el && val && !el.readOnly) el.value = val; }
+  if (focused && $(focused) && !$(focused).disabled) $(focused).focus({ preventScroll: true });
+  if (tab === "now" && g?.turn?.status === "live" && (wasNear || isResponder())) stickBottom(true);
+}
+$("brand-ic").replaceChildren(icon("store", "!"));
+if (code && nick) connect();
+render();
+</script>
+</body>
+</html>

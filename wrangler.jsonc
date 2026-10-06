@@ -1,0 +1,19 @@
+{
+  "name": "bonchil-jinsang",
+  "main": "src/worker.js",
+  "compatibility_date": "2025-09-01",
+  "assets": {
+    "directory": "public",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/ws/*"]
+  },
+  "durable_objects": { "bindings": [{ "name": "ROOM", "class_name": "Room" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room"] }],
+  // AI는 OpenAI 호환 API면 아무거나: Gemini(기본) / Groq / 내 맥 Ollama(터널 주소)
+  // 키는 여기 말고 .dev.vars(로컬) 또는 `npx wrangler secret put LLM_API_KEY`(배포)에 넣는다
+  "vars": {
+    "LLM_BASE_URL": "https://generativelanguage.googleapis.com/v1beta/openai",
+    "LLM_MODEL": "gemini-2.5-flash"
+  }
+}
