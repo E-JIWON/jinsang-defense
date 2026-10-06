@@ -20,9 +20,10 @@ export default {
 async function ask(env, kind, prompt, turn) {
   const local = /localhost|127\.0\.0\.1|trycloudflare|ngrok/.test(env.LLM_BASE_URL || "");
   if (!env.LLM_API_KEY && !local) return fakeAnswer(kind, turn);
-  // 붐빔(503)·한도(429)면 1초 쉬고 같은 모델로 한 번 더. 한 번에 25초 넘으면 포기
-  let res;
-  for (const model of [env.LLM_MODEL, env.LLM_MODEL]) {
+  // 분당 한도(429)·붐빔(503)·시간초과면 다음 모델로. 한 번에 25초 넘으면 포기
+  const models = [env.LLM_MODEL, ...String(env.LLM_FALLBACK_MODELS || "").split(",")].map((m) => m.trim()).filter(Boolean);
+  let res, body = "";
+  for (const model of models) {
     res = await fetch(env.LLM_BASE_URL.replace(/\/$/, "") + "/chat/completions", {
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bearer ${env.LLM_API_KEY || "local"}` },
@@ -30,9 +31,11 @@ async function ask(env, kind, prompt, turn) {
       signal: AbortSignal.timeout(25000),
     }).catch((e) => ({ ok: false, status: e.name === "TimeoutError" ? 504 : 502 }));
     if (![429, 503, 504].includes(res.status)) break;
-    await new Promise((r) => setTimeout(r, 1000));
+    body = res.text ? await res.text().catch(() => "") : "";
   }
-  if (!res.ok) throw new Error(res.status === 429 ? "오늘 무료 AI 한도를 다 썼어요." : res.status === 503 || res.status === 504 ? "AI가 지금 붐벼요. 잠시 뒤 다시 해 주세요." : `AI 오류 ${res.status}`);
+  if (!res.ok) throw new Error(res.status === 429
+    ? (/PerDay/i.test(body) ? "오늘 무료 AI 한도를 다 썼어요. 내일 다시 놀아요." : "AI가 잠깐 숨 고르는 중이에요(무료 분당 한도). 10초쯤 뒤 다시 보내 주세요.")
+    : res.status === 503 || res.status === 504 ? "AI가 지금 붐벼요. 잠시 뒤 다시 보내 주세요." : `AI 오류 ${res.status}`);
   const j = await res.json();
   return parseJson(j.choices?.[0]?.message?.content);
 }

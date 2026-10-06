@@ -14,7 +14,9 @@
   // 키는 여기 말고 .dev.vars(로컬) 또는 `npx wrangler secret put LLM_API_KEY`(배포)에 넣는다
   "vars": {
     "LLM_BASE_URL": "https://generativelanguage.googleapis.com/v1beta/openai",
-    "LLM_MODEL": "gemini-3.5-flash",
+    "LLM_MODEL": "gemini-3.6-flash",
+    // 무료 분당 한도(429)·붐빔(503)이면 차례로 넘어갈 모델들 (한도는 모델마다 따로)
+    "LLM_FALLBACK_MODELS": "gemini-3.5-flash,gemini-flash-latest",
     // 생각(추론) 끄기: 8초 → 3초. Ollama 등 지원 안 하는 곳이면 빈 문자열로
     "LLM_REASONING": "none"
   }
