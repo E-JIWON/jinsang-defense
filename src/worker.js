@@ -27,7 +27,7 @@ async function ask(env, kind, prompt, turn) {
     res = await fetch(env.LLM_BASE_URL.replace(/\/$/, "") + "/chat/completions", {
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bearer ${env.LLM_API_KEY || "local"}` },
-      body: JSON.stringify({ model, messages: [{ role: "user", content: prompt }], response_format: { type: "json_object" }, temperature: 0.9, ...(env.LLM_REASONING ? { reasoning_effort: env.LLM_REASONING } : {}) }),
+      body: JSON.stringify({ model, messages: [{ role: "user", content: prompt }], response_format: { type: "json_object" }, temperature: 0.7, ...(env.LLM_REASONING ? { reasoning_effort: env.LLM_REASONING } : {}) }),
       signal: AbortSignal.timeout(25000),
     }).catch((e) => ({ ok: false, status: e.name === "TimeoutError" ? 504 : 502 }));
     if (![429, 503, 504].includes(res.status)) break;
