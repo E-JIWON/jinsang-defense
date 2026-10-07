@@ -50,7 +50,19 @@ export class Room extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
     this.g = fresh();
-    ctx.blockConcurrencyWhile(async () => { this.g = (await ctx.storage.get("g")) || fresh(); });
+    ctx.blockConcurrencyWhile(async () => {
+      this.g = (await ctx.storage.get("g")) || fresh();
+      // 손님 대답을 기다리다 서버가 재시작됐으면(배포 등) 멈춘 말을 '다시 보내기' 상태로 돌려놓는다
+      const t = this.g.turn;
+      if (t?.status === "live" && t.thinking) {
+        const last = t.msgs.at(-1);
+        if (last?.f === "p") last.failed = true;
+        t.thinking = false; t.clock.resumeAt = Date.now();
+        t.lastError = "서버가 잠깐 다시 켜졌어요. 다시 보내기를 눌러 주세요.";
+        await ctx.storage.put("g", this.g);
+        await ctx.storage.setAlarm(Date.now() + remaining(t));
+      }
+    });
   }
 
   async fetch(req) {
