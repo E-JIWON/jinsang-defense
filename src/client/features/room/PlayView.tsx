@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type { Customer } from "../../../shared/game";
 import { MAX_LINES } from "../../../shared/game";
 import { Avatar } from "../../components/Avatar";
@@ -25,7 +25,7 @@ export function PlayView({ c, idea, setIdea }: Props) {
   const anger = live ? live.anger : (rs.at(-1)?.anger ?? c.anger);
 
   const sub = live
-    ? `${nameOf(live.player)} 응대 중 · ${live.points}점 · ${live.msgs.filter((m) => m.f === "p").length}/${MAX_LINES}마디`
+    ? `${live.points}점 · ${live.msgs.filter((m) => m.f === "p").length}/${MAX_LINES}마디`
     : g.phase === "review"
       ? `${g.round}번째 손님 · 리뷰 도착`
       : g.phase === "reviewing"
@@ -35,10 +35,18 @@ export function PlayView({ c, idea, setIdea }: Props) {
           : `${g.round}번째 손님 · 모두 응대 끝`;
 
   // 응대 중엔 새 대사를 따라 내려간다(위로 올려 읽는 중이면 그대로, 내 차례면 항상).
+  // 응대 도중에 들어왔을 때와 리뷰가 도착했을 때는 볼 것이 맨 아래에 있으니 꼭 내린다.
   const lines = live?.msgs.length ?? 0;
+  const thinking = !!live?.thinking;
+  const responder = live?.player;
+  const reviewed = g.phase === "review";
+  const entered = useRef(false);
   useEffect(() => {
-    if (lines || live?.thinking) stickBottom(live?.player === me);
-  }, [lines, live?.thinking, live?.player, me]);
+    const first = !entered.current;
+    entered.current = true;
+    if (reviewed) return stickBottom(true);
+    if (lines || thinking) stickBottom(first || responder === me);
+  }, [lines, thinking, responder, me, reviewed]);
 
   return (
     <div className="shell">

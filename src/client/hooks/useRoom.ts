@@ -42,6 +42,8 @@ export function useRoom(code: string | null, nick: string | null) {
       switch (m.type) {
         case "you":
           known.current = true;
+          // 바로 뒤따라오는 state를 렌더 전에 처리하므로, 내 입장을 남의 입장으로 알리지 않게 즉시 기록한다.
+          latest.current.me = m.id;
           setMe(m.id);
           while (outbox.current.length) socket.send(outbox.current.shift() as string);
           return;
