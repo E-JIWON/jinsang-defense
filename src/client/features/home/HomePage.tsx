@@ -1,5 +1,7 @@
+import { Dices } from "lucide-react";
 import { useState } from "react";
 import { ROOM_CODE } from "../../../shared/protocol";
+import { randomNick } from "../../lib/nick";
 import { PreviewChat } from "./PreviewChat";
 
 type Props = { initialNick: string; onEnter: (code: string, nick: string) => void };
@@ -55,6 +57,18 @@ export function HomePage({ initialNick, onEnter }: Props) {
               aria-label="닉네임"
               autoComplete="off"
             />
+            <button
+              type="button"
+              className="btn ghost dice"
+              aria-label="랜덤 닉네임"
+              title="랜덤 닉네임"
+              onClick={() => {
+                setNick(randomNick());
+                setError("");
+              }}
+            >
+              <Dices aria-hidden />
+            </button>
             <button type="submit" className="btn solid" disabled={opening}>
               새 가게 열기
             </button>
@@ -81,7 +95,10 @@ export function HomePage({ initialNick, onEnter }: Props) {
             </button>
           </form>
         </div>
-        {error && <p className="err">{error}</p>}
+        {/* 문구가 생길 때 위아래가 밀리지 않게 자리를 늘 잡아 둔다. */}
+        <p className="err err-slot" aria-live="polite">
+          {error}
+        </p>
       </div>
       {/* 왼쪽은 시작하는 곳만, 설명은 오른쪽으로 모아 첫눈에 어디서 시작할지 보이게. */}
       <div className="hero-side">

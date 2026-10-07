@@ -210,6 +210,9 @@ main {
   font-size: 13px;
   font-weight: 600;
 }
+.err-slot {
+  min-height: 1.6em;
+}
 .h3 {
   font-size: 14px;
   font-weight: 700;
@@ -561,6 +564,14 @@ textarea::placeholder {
   font-size: 15px;
   font-weight: 700;
   flex: none;
+}
+.entry .dice {
+  padding: 0 10px;
+  color: var(--ink-3);
+}
+.entry .dice svg {
+  width: 22px;
+  height: 22px;
 }
 .alt-entry {
   display: flex;

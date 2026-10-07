@@ -1,5 +1,7 @@
+import { Dices } from "lucide-react";
 import { useState } from "react";
 import { Avatar } from "../../components/Avatar";
+import { randomNick } from "../../lib/nick";
 import { useRoomContext } from "../room/RoomContext";
 import { PreviewChat } from "./PreviewChat";
 
@@ -57,11 +59,26 @@ export function JoinPage({ onEnter }: { onEnter: (nick: string) => void }) {
             aria-label="닉네임"
             autoComplete="off"
           />
+          <button
+            type="button"
+            className="btn ghost dice"
+            aria-label="랜덤 닉네임"
+            title="랜덤 닉네임"
+            onClick={() => {
+              setNick(randomNick());
+              setError("");
+            }}
+          >
+            <Dices aria-hidden />
+          </button>
           <button type="submit" className="btn solid">
             가게 들어가기
           </button>
         </form>
-        {error && <p className="err">{error}</p>}
+        {/* 문구가 생길 때 위아래가 밀리지 않게 자리를 늘 잡아 둔다. */}
+        <p className="err err-slot" aria-live="polite">
+          {error}
+        </p>
       </div>
       <PreviewChat />
     </div>
