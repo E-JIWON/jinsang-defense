@@ -36,16 +36,22 @@ let nick = store.get("jinsang-nick") || "";
 let code = (location.pathname.match(/^\/r\/([A-Za-z0-9]{4,8})/) || [])[1]?.toUpperCase() || null;
 const roomUrl = () => `${location.origin}/r/${code}`;
 
+let rounds = [];
 let ws = null, g = null, online = [], errMsg = "", connected = false, retry = 0;
 let tab = "now", pastOpen = null, custOpen = false, customIdea = "", confirmFold = false, lastAnimated = "";
 const expanded = new Set();
 
 function connect() {
   ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/${code}`);
-  ws.onopen = () => { connected = true; retry = 0; if (nick && !needNick) ws.send(JSON.stringify({ type: "hello", token, nick })); };
+  ws.onopen = () => {
+    connected = true; retry = 0;
+    if (nick && !needNick) ws.send(JSON.stringify({ type: "hello", token, nick }));
+    while (outbox.length) ws.send(outbox.shift()); // 끊긴 동안 누른 동작은 다시 연결되면 보낸다
+  };
   ws.onmessage = (ev) => {
     const m = JSON.parse(ev.data);
     if (m.type === "you") { me = m.id; render(); return; }
+    if (m.type === "rounds") { rounds = m.rounds || []; render(); return; }
     if (m.type === "state") {
       const prev = g, prevOnline = online; g = m.g; online = m.online; errMsg = ""; if (m.config) C = m.config;
       const t = g.turn, pt = prev?.turn;
@@ -59,7 +65,13 @@ function connect() {
   };
   ws.onclose = () => { connected = false; render(); setTimeout(connect, Math.min(8000, 500 * 2 ** retry++)); };
 }
-const act = (type, extra = {}) => { if (ws?.readyState === 1) ws.send(JSON.stringify({ type, ...extra })); };
+const outbox = [];
+function act(type, extra = {}) {
+  const msg = JSON.stringify({ type, ...extra });
+  if (ws?.readyState === 1) return ws.send(msg);
+  outbox.push(msg); if (outbox.length > 5) outbox.shift();
+  toast("다시 연결하는 중이에요. 연결되면 바로 보낼게요");
+}
 
 /* ---------- 파생 ---------- */
 const isHost = () => g?.hostId === me;
@@ -76,7 +88,7 @@ function remaining(t = g?.turn) {
   if (!t?.clock) return C.TURN_MS;
   return C.TURN_MS - t.clock.spent - (t.clock.resumeAt ? Date.now() - t.clock.resumeAt : 0);
 }
-const pastRounds = () => (g?.rounds || []).filter((r) => !(r.round === g.round && ["playing", "review", "reviewing"].includes(g.phase))).sort((a, b) => (b.at || 0) - (a.at || 0));
+const pastRounds = () => rounds.filter((r) => !(r.round === g.round && ["playing", "review", "reviewing"].includes(g.phase))).sort((a, b) => (b.at || 0) - (a.at || 0));
 const staffIds = () => Object.entries(g?.players || {}).filter(([, p]) => p.staff).sort((a, b) => a[1].joinedAt - b[1].joinedAt).map(([id]) => id);
 
 /* ---------- 연출 ---------- */
@@ -132,7 +144,7 @@ function bubbles(msgs, animKey, player) {
     if (m.f === "p") return h("div", { className: "mp" },
       i === 1 && player ? h("span", { className: "who", textContent: nameOf(player) }) : null,
       h("div", { className: "bubble", textContent: m.t, style: m.failed ? "opacity:.55" : "" }),
-      m.failed ? h("div", { className: "meta" }, h("span", { className: "chip bad", textContent: "전송 실패" }), animKey && g.turn?.player === me ? h("button", { className: "btn solid", style: "height:28px;padding:0 10px;font-size:12px", textContent: "다시 보내기", onclick: () => act("retry") }) : null)
+      m.failed ? h("div", { className: "meta" }, h("span", { className: "chip bad", textContent: "전송 실패" }), animKey && g.turn?.player === me ? h("button", { className: "btn solid retry", textContent: "다시 보내기", onclick: () => act("retry") }) : null)
         : m.g != null ? h("div", { className: "meta" }, h("span", { className: "chip" + (m.g >= 12 ? " good" : m.g <= 6 ? " bad" : ""), textContent: `+${m.g}${m.why ? " · " + m.why : ""}` })) : null);
     const bubble = h("div", { className: "bubble" });
     const meta = (m.act || m.thought) ? h("div", { className: "meta" },
@@ -141,7 +153,7 @@ function bubbles(msgs, animKey, player) {
     const key = `${animKey}:${i}`;
     if (animKey && i === msgs.length - 1 && i > 0 && lastAnimated !== key && !reduced) {
       lastAnimated = key; if (meta) meta.hidden = true;
-      let n = 0; const tm = setInterval(() => { n++; bubble.textContent = m.t.slice(0, n); if (n % 12 === 0) stickBottom(); if (n >= m.t.length) { clearInterval(tm); if (meta) meta.hidden = false; stickBottom(); } }, 28);
+      let n = 0; const tm = setInterval(() => { if (!bubble.isConnected) return clearInterval(tm); n++; bubble.textContent = m.t.slice(0, n); if (n % 12 === 0) stickBottom(); if (n >= m.t.length) { clearInterval(tm); if (meta) meta.hidden = false; stickBottom(); } }, 28);
     } else bubble.textContent = m.t;
     return h("div", { className: "mc" }, face(g?.customer?.anger ?? 50, "face sm"), h("div", { className: "body" }, bubble, meta));
   });
@@ -350,7 +362,7 @@ function dock(v, t, live, cur) {
 /* ---------- 지난 손님 ---------- */
 function pastView() {
   const list = pastRounds();
-  const r = pastOpen != null && (g?.rounds || []).find((x) => x.round === pastOpen);
+  const r = pastOpen != null && rounds.find((x) => x.round === pastOpen);
   if (r) {
     const rs = r.results || [];
     const thread = h("div", { className: "thread" });
@@ -378,7 +390,7 @@ function rankView() {
   const ids = Object.keys(g?.scores || {}).sort((a, b) => g.scores[b] - g.scores[a]);
   if (!ids.length) return [h("div", { className: "narrow" }, h("div", { className: "card" }, h("h2", { textContent: "아직 순위가 없어요", style: "font-size:18px" }), h("p", { className: "sub", textContent: "첫 손님을 응대하면 누적 점수가 쌓여요." })))];
   const stat = (id) => {
-    const turns = (g.rounds || []).flatMap((r) => (r.results || []).filter((x) => x.player === id));
+    const turns = rounds.flatMap((r) => (r.results || []).filter((x) => x.player === id));
     const lines = turns.flatMap((x) => (x.msgs || []).filter((m) => m.f === "p" && m.g != null));
     return { n: turns.length, happy: turns.filter((x) => x.endedBy === "happy").length, boom: turns.filter((x) => x.endedBy === "boom").length,
       avg: lines.length ? Math.round(lines.reduce((a, m) => a + m.g, 0) / lines.length * 10) / 10 : 0 };
@@ -396,7 +408,7 @@ function rankView() {
 
 /* ---------- 렌더 ---------- */
 function renderTop() {
-  const inRoom = code && g;
+  const inRoom = code && g && !needNick; // 닉네임 정하기 전(초대 입장 화면)엔 탭·접속자 숨김
   $("tabs").hidden = !inRoom;
   if (inRoom) {
     const n = pastRounds().length;

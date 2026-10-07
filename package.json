@@ -5,10 +5,11 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "npm run check && wrangler deploy",
-    "test": "node --test test/*.test.ts",
+    "test": "node --test test/game.test.ts",
     "typecheck": "tsc",
     "types": "wrangler types",
-    "check": "npm run typecheck && npm test"
+    "check": "npm run typecheck && npm test",
+    "e2e": "node --test test/e2e.ts"
   },
   "devDependencies": {
     "@types/node": "^24.19.1",

@@ -9,6 +9,8 @@ const CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 const HOUR = 3600_000, DAY = 24 * HOUR;
 // 무료 AI 한도 지키기: 한 사람(IP) · 한 방 · 전체 하루
 const LIMITS = { ip: 120, room: 300, rooms: 30 } as const;
+const MAX_PLAYERS = 30;        // 링크만 알면 들어오니 방 인원 상한
+const REACT_GAP_MS = 250;      // 리액션 연타로 모두에게 메시지 폭탄 보내는 것 막기
 
 const ipOf = (req: Request) => req.headers.get("CF-Connecting-IP") || "local";
 const limiter = (env: Env, key: string) => env.LIMITER.get(env.LIMITER.idFromName(key));
@@ -44,7 +46,9 @@ export class Limiter extends DurableObject<Env> {
 async function ask(env: Env, kind: AiKind, prompt: string, turn?: Turn | null): Promise<AiOut> {
   const base = String(env.LLM_BASE_URL || "");
   const local = /localhost|127\.0\.0\.1|trycloudflare|ngrok/.test(base);
-  if (!env.LLM_API_KEY && !local) return fakeAnswer(kind, turn);
+  const fake = (env as Env & { LLM_FAKE?: string }).LLM_FAKE === "1";
+  if (fake && turn?.msgs.at(-1)?.t.includes("#fail")) throw new Error("가짜 실패");
+  if (fake || (!env.LLM_API_KEY && !local)) return fakeAnswer(kind, turn);
   // 분당 한도(429)·구글 서버 붐빔(503)·시간초과면 다음 모델로, 한 바퀴 돌면 1.5초 쉬고 한 바퀴 더. 전체 30초까지
   const models = [env.LLM_MODEL, ...String(env.LLM_FALLBACK_MODELS || "").split(",")].map((m) => String(m).trim()).filter(Boolean);
   const deadline = Date.now() + 30000;
@@ -72,7 +76,7 @@ async function ask(env: Env, kind: AiKind, prompt: string, turn?: Turn | null): 
 }
 
 /** 소켓에 붙여 두는 정보. id는 hello 뒤에 생긴다 */
-interface Att { ip: string; id?: string }
+interface Att { ip: string; id?: string; lastReact?: number }
 type Incoming = { type: string; [k: string]: unknown };
 
 export class Room extends DurableObject<Env> {
@@ -102,15 +106,23 @@ export class Room extends DurableObject<Env> {
     this.ctx.acceptWebSocket(server);
     server.serializeAttachment({ ip: ipOf(req) } satisfies Att);
     server.send(JSON.stringify(this.stateMsg())); // 닉네임 정하기 전에도 누가 있는지 보이게
+    server.send(JSON.stringify(this.roundsMsg()));
     return new Response(null, { status: 101, webSocket: client });
   }
 
   att(ws: WebSocket): Att { return (ws.deserializeAttachment() as Att | null) ?? { ip: "local" }; }
   sockets() { return this.ctx.getWebSockets().filter((w) => w.readyState === WebSocket.OPEN); }
   online() { return [...new Set(this.sockets().map((w) => this.att(w).id).filter((x): x is string => !!x))]; }
-  stateMsg() { return { type: "state", g: this.g, online: this.online(), config: CONFIG }; }
+  sentRounds = "";
+  stateMsg() { const { rounds: _, ...g } = this.g; return { type: "state", g, online: this.online(), config: CONFIG }; }
+  roundsMsg() { return { type: "rounds", rounds: this.g.rounds }; }
+  roundsKey() { return this.g.rounds.map((r) => `${r.round}:${r.at}`).join(","); }
   send(obj: unknown) { const s = JSON.stringify(obj); for (const w of this.sockets()) try { w.send(s); } catch {} }
-  broadcast() { this.send(this.stateMsg()); }
+  broadcast() {
+    this.send(this.stateMsg());
+    const key = this.roundsKey();
+    if (key !== this.sentRounds) { this.sentRounds = key; this.send(this.roundsMsg()); }
+  }
   async save() { await this.ctx.storage.put("g", this.g); this.broadcast(); }
   fail(ws: WebSocket, msg: string) { try { ws.send(JSON.stringify({ type: "error", msg })); } catch {} }
 
@@ -132,6 +144,7 @@ export class Room extends DurableObject<Env> {
       if (!/^[A-Za-z0-9_-]{16,64}$/.test(token)) return this.fail(ws, "새로고침해 주세요.");
       if (!nick) return this.fail(ws, "닉네임을 입력해 주세요.");
       const id = await publicId(token);
+      if (!g.players[id] && Object.keys(g.players).length >= MAX_PLAYERS) return this.fail(ws, "가게가 꽉 찼어요.");
       ws.serializeAttachment({ ...this.att(ws), id } satisfies Att);
       ws.send(JSON.stringify({ type: "you", id }));
       g.players[id] = { ...(g.players[id] || { staff: true, joinedAt: Date.now() }), nick }; // 들어오면 기본은 직원
@@ -149,6 +162,9 @@ export class Room extends DurableObject<Env> {
       case "takeHost": if (!g.hostId || !this.online().includes(g.hostId)) { g.hostId = me; return this.save(); } return;
       case "react": {
         if (!(REACTS as readonly string[]).includes(String(m.e))) return;
+        const a = this.att(ws), now = Date.now();
+        if (now - (a.lastReact ?? 0) < REACT_GAP_MS) return;
+        ws.serializeAttachment({ ...a, lastReact: now } satisfies Att);
         this.send({ type: "react", e: m.e, from: me });
         if (t?.status === "live" && t.player !== me) { t.reacts = (t.reacts || 0) + 1; await this.ctx.storage.put("g", g); }
         return;

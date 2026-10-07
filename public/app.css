@@ -41,7 +41,7 @@ p { text-wrap: pretty }
 /* 재질 */
 .card { background: color-mix(in srgb, var(--surface) 86%, transparent); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border: 1px solid var(--border); border-radius: var(--radius-l); box-shadow: var(--shadow-m); padding: 20px; display: grid; gap: 14px; min-width: 0 }
 .card.tight { padding: 18px; gap: 12px }
-.eyebrow { font-size: 12px; font-weight: 700; color: var(--primary) }
+.eyebrow { font-size: 12px; font-weight: 700; color: #3d6650 }
 .sub { color: var(--ink-3); font-size: 14px }
 .tiny { color: var(--ink-3); font-size: 12px }
 .err { color: var(--danger); font-size: 13px; font-weight: 600 }
@@ -62,7 +62,8 @@ p { text-wrap: pretty }
 .btn.ghost { background: none; box-shadow: none; color: var(--ink-3); height: auto; padding: 4px 2px; font-size: 13px }
 .btn.ghost::after { display: none }
 .btn.ghost:hover { color: var(--ink) }
-@media (pointer: coarse) { .btn.ghost { min-height: 44px; padding: 0 8px } }
+.btn.retry { height: 30px; padding: 0 12px; font-size: 12px }
+@media (pointer: coarse) { .btn.ghost { min-height: 44px; padding: 0 8px } .btn.retry { height: 40px; padding: 0 14px } }
 .btn.icon { width: 44px; height: 44px; padding: 0; border-radius: 50%; flex: none }
 .btn:disabled { opacity: .45; cursor: default }
 .btn:focus-visible, .tab:focus-visible, input:focus-visible, textarea:focus-visible, .cb-row:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px }
@@ -182,7 +183,7 @@ input::placeholder, textarea::placeholder { color: var(--ink-4) }
 .hint > span { flex: 1; min-width: 0 }
 .reacts { display: flex; gap: 6px; align-items: center; padding: 4px 6px }
 .reacts > span { flex: 1; font-size: 13px; color: var(--ink-3); min-width: 0 }
-.reacts .btn { width: 44px; height: 40px; padding: 0; font-size: 18px; border-radius: 12px }
+.reacts .btn { width: 44px; height: 44px; padding: 0; font-size: 18px; border-radius: 12px }
 
 /* 목록 */
 .list { display: grid }

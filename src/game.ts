@@ -157,7 +157,7 @@ export function archive(g: Game): void {
   const entry: Round = { round: g.round, customer: g.customer, results: g.roundResults, review: g.review, at: Date.now() };
   const i = g.rounds.findIndex((r) => r.round === g.round);
   if (i >= 0) g.rounds[i] = entry; else g.rounds.push(entry);
-  if (g.rounds.length > 50) g.rounds.splice(0, g.rounds.length - 50); // ponytail: 오래된 손님은 50명까지만. 더 필요하면 별도 저장
+  if (g.rounds.length > 30) g.rounds.splice(0, g.rounds.length - 30); // ponytail: 오래된 손님은 30명까지만(저장 한 칸 크기 한도). 더 필요하면 판별 저장
 }
 
 export function toReview(out: AiOut, rs: Result[]): Review {
