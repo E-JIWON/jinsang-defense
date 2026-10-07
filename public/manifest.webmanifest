@@ -1,0 +1,14 @@
+{
+  "name": "진상 손님 버티기",
+  "short_name": "진상 손님",
+  "description": "AI가 연기하는 진상 손님을 친구들과 돌아가며 2분씩 달래는 멀티플레이 게임",
+  "lang": "ko",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#eae7df",
+  "theme_color": "#eae7df",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

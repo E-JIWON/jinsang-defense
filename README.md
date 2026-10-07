@@ -86,7 +86,7 @@ src/
     features/        home(첫 화면·초대 입장) · room(대기실·대화·입력 도크) · history(지난 손님·순위)
     components/      Avatar, Face, Header, Toasts
 e2e/room.e2e.ts      기능 QA: 떠 있는 서버에 여러 명이 붙어 한 판 전체
-public/              파비콘, 카톡·SNS 공유 이미지(og.png), robots.txt
+public/              파비콘·앱 아이콘, 앱 정보(manifest), 카톡·SNS 공유 이미지(og.png), robots.txt·sitemap.xml
 docs/                README 데모 GIF
 ```
 
