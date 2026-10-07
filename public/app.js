@@ -31,7 +31,7 @@ const store = { get: (k) => { try { return localStorage.getItem(k); } catch { re
 // 비밀 토큰은 이 브라우저에만 있고, 서버는 그 해시를 공개 id로 쓴다(남이 흉내 못 냄). me는 서버가 'you'로 알려준다
 const token = store.get("jinsang-token") || [...crypto.getRandomValues(new Uint8Array(24))].map((b) => b.toString(16).padStart(2, "0")).join("");
 store.set("jinsang-token", token);
-let me = null;
+let me = null, known = false;
 let nick = store.get("jinsang-nick") || "";
 let code = (location.pathname.match(/^\/r\/([A-Za-z0-9]{4,8})/) || [])[1]?.toUpperCase() || null;
 const roomUrl = () => `${location.origin}/r/${code}`;
@@ -45,12 +45,16 @@ function connect() {
   ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/${code}`);
   ws.onopen = () => {
     connected = true; retry = 0;
+    known = false; // 다시 붙을 때마다 서버가 나를 다시 확인할 때까지 동작을 모아 둔다 (화면의 me는 그대로)
     if (nick && !needNick) ws.send(JSON.stringify({ type: "hello", token, nick }));
-    while (outbox.length) ws.send(outbox.shift()); // 끊긴 동안 누른 동작은 다시 연결되면 보낸다
   };
   ws.onmessage = (ev) => {
     const m = JSON.parse(ev.data);
-    if (m.type === "you") { me = m.id; render(); return; }
+    if (m.type === "you") {
+      me = m.id; known = true;
+      while (outbox.length) ws.send(outbox.shift()); // 서버가 나를 확인한 뒤에야 쌓인 동작을 보낸다(끊김·입장 직후 클릭)
+      render(); return;
+    }
     if (m.type === "rounds") { rounds = m.rounds || []; render(); return; }
     if (m.type === "state") {
       const prev = g, prevOnline = online; g = m.g; online = m.online; errMsg = ""; if (m.config) C = m.config;
@@ -68,9 +72,9 @@ function connect() {
 const outbox = [];
 function act(type, extra = {}) {
   const msg = JSON.stringify({ type, ...extra });
-  if (ws?.readyState === 1) return ws.send(msg);
+  if (ws?.readyState === 1 && known) return ws.send(msg);
   outbox.push(msg); if (outbox.length > 5) outbox.shift();
-  toast("다시 연결하는 중이에요. 연결되면 바로 보낼게요");
+  if (ws?.readyState !== 1) toast("다시 연결하는 중이에요. 연결되면 바로 보낼게요");
 }
 
 /* ---------- 파생 ---------- */
