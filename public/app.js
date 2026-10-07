@@ -61,7 +61,7 @@ function connect() {
       const t = g.turn, pt = prev?.turn;
       if (t && pt && t.player === pt.player && t.anger > pt.anger + 9) setTimeout(shakeFace, 50);
       if (t?.status === "done" && pt?.status === "live" && t.player === pt.player) toast(`${nameOf(t.player)} 응대 끝 · +${t.score}`);
-      if (t?.status === "live" && pt?.status !== "live" && t.player !== me) toast(`${nameOf(t.player)}님 응대 시작`);
+      if (prev && t?.status === "live" && pt?.status !== "live" && t.player !== me) toast(`${nameOf(t.player)}님 응대 시작`);
       if (prev) for (const id of online) if (!prevOnline.includes(id) && id !== me) toast(`${nameOf(id)}님이 들어왔어요`);
       render();
     } else if (m.type === "react") floaty(m.e);
