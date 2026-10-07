@@ -713,12 +713,20 @@ textarea::placeholder {
 .custbar.open .chev {
   transform: rotate(180deg);
 }
-.side .card p {
+.brief {
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l);
+  padding: 14px 16px;
+  display: grid;
+  gap: 8px;
+}
+.brief p {
   font-size: 14px;
   line-height: 1.6;
   color: var(--ink-2);
 }
-.side .card p.sub {
+.brief p.sub {
   font-size: 13px;
   color: var(--ink-3);
 }
@@ -737,6 +745,15 @@ textarea::placeholder {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: 500;
+  color: var(--ink-3);
+}
+.role-mini b {
+  color: var(--ink);
+}
+/* 폰은 한 줄로 줄이고, 펼치거나 PC처럼 넓으면 목표를 끝까지 보여 준다. */
+.custbar.open .role-mini span:last-child {
+  white-space: normal;
 }
 .cb-more {
   display: grid;
@@ -750,6 +767,9 @@ textarea::placeholder {
 @media (min-width: 960px) {
   .desk-hide {
     display: none;
+  }
+  .role-mini span:last-child {
+    white-space: normal;
   }
   .cb-row {
     cursor: default;
@@ -767,25 +787,6 @@ textarea::placeholder {
   border-radius: 999px;
   background: var(--surface-subtle);
   color: var(--ink-3);
-}
-.role {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 8px;
-  align-items: start;
-  font-size: 13px;
-  color: var(--ink-3);
-  line-height: 1.55;
-}
-.role .label {
-  margin-top: 1px;
-}
-.role.divided {
-  border-top: 1px solid var(--border);
-  padding-top: 10px;
-}
-.role b {
-  color: var(--ink);
 }
 .label {
   flex: none;

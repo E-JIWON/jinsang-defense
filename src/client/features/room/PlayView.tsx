@@ -5,7 +5,7 @@ import { Avatar } from "../../components/Avatar";
 import { Typing } from "../../components/Typing";
 import { stickBottom } from "../../lib/scroll";
 import { CustomerBar } from "./CustomerBar";
-import { CustomerDetails, RoleLine } from "./CustomerInfo";
+import { CustomerDetails } from "./CustomerInfo";
 import { Dock } from "./Dock";
 import { DoneTurn } from "./DoneTurn";
 import { copyInvite } from "./InviteBox";
@@ -45,6 +45,10 @@ export function PlayView({ c, idea, setIdea }: Props) {
       <section className="chatcol">
         <CustomerBar c={c} anger={anger} sub={sub} turn={t} />
         <div className="thread">
+          <div className="brief">
+            <span className="eyebrow">오늘의 손님</span>
+            <CustomerDetails c={c} />
+          </div>
           {!rs.length && !live && <div className="pill">{c.name} 손님이 들어왔어요</div>}
           {rs.map((r, i) => (
             <DoneTurn key={r.player} r={r} openByDefault={!live && g.phase === "playing" && i === rs.length - 1} />
@@ -77,11 +81,6 @@ export function PlayView({ c, idea, setIdea }: Props) {
         <Dock idea={idea} setIdea={setIdea} />
       </section>
       <aside className="side play">
-        <div className="card tight">
-          <span className="h3">오늘의 손님</span>
-          <CustomerDetails c={c} />
-          <RoleLine c={c} divided />
-        </div>
         <Roster title="근무표 · 누적 점수" withScores />
         <div className="card tight">
           <div className="row spread">

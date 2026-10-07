@@ -1,9 +1,9 @@
 import { ChevronDown } from "lucide-react";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
-import { type Customer, remaining, staffOf, TURN_MS, type Turn } from "../../../shared/game";
+import { type Customer, goalOf, remaining, staffOf, TURN_MS, type Turn } from "../../../shared/game";
 import { Face } from "../../components/Face";
 import { formatClock, moodColor } from "../../lib/format";
-import { CustomerDetails, RoleLine } from "./CustomerInfo";
+import { CustomerDetails } from "./CustomerInfo";
 
 /** 1초보다 촘촘히 갱신해야 0:00 근처에서 숫자가 튀지 않는다. 이 컴포넌트만 다시 그린다. */
 function Clock({ turn }: { turn: Turn | null }) {
@@ -60,15 +60,16 @@ export function CustomerBar({ c, anger, sub, turn }: Props) {
           <ChevronDown aria-hidden />
         </span>
       </button>
-      {open ? (
+      {/* 내 역할은 대화하는 내내 눈앞에 있어야 해서 접어도, PC에서도 늘 보인다. */}
+      <div className="role-mini">
+        <span className="label">내 역할</span>
+        <span>
+          <b>{staffOf(c)}</b> · {goalOf(c)}
+        </span>
+      </div>
+      {open && (
         <div className="cb-more desk-hide">
           <CustomerDetails c={c} />
-          <RoleLine c={c} />
-        </div>
-      ) : (
-        <div className="role-mini desk-hide">
-          <span className="label">내 역할</span>
-          <span>{staffOf(c)}</span>
         </div>
       )}
     </div>
