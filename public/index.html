@@ -187,6 +187,15 @@ button.li { cursor: pointer } button.li:hover { background: var(--surface-subtle
 .badge.ok { background: var(--primary-light); color: var(--primary) }
 .badge.host { background: color-mix(in srgb, var(--sand) 20%, transparent); color: #7d6223 }
 
+/* 대기실 */
+.lobbycol { grid-template-rows: auto; min-height: 0 }
+.lobby { gap: 18px }
+.invitebox { background: var(--surface-subtle); border-radius: var(--radius-l); padding: 14px; display: grid; gap: 10px }
+.startrow { display: flex; gap: 8px; align-items: center }
+.startrow input { height: 52px }
+.startrow .btn { flex: none }
+@media (max-width: 600px) { .startrow { flex-direction: column; align-items: stretch } }
+.skelbox, .skelbar { background: linear-gradient(90deg, var(--surface-subtle), var(--border-strong), var(--surface-subtle)) !important; background-size: 200% 100% !important; animation: shimmer 1.4s linear infinite }
 /* 초대 카드 (링크 미리보기 모양) */
 .invite { border: 1px solid var(--border-strong); border-radius: var(--radius-l); overflow: hidden; background: var(--surface) }
 .invite .cover { padding: 18px; background: var(--primary); color: #fff; display: grid; gap: 4px }
@@ -383,15 +392,12 @@ function reviewBox(rv, results) {
       h("span", { className: "sc", textContent: "+" + (byP[it.player]?.score ?? 0) }),
       h("p", { textContent: it.review }))));
 }
-function inviteCard() {
+function inviteBox() {
   const inp = h("input", { id: "invite-link", readOnly: true, value: roomUrl(), onfocus: (e) => e.target.select(), ariaLabel: "초대 링크" });
-  const host = g.players[g.hostId]?.nick || "친구";
-  return h("div", { className: "invite" },
-    h("div", { className: "cover" }, h("b", { textContent: "진상 손님 버티기" }), h("span", { textContent: `${host}님이 같이 손님 받자고 해요` })),
-    h("div", { className: "body" },
-      h("div", { className: "row", style: "justify-content:space-between" }, h("span", { className: "tiny", textContent: "가게 코드" }), h("span", { className: "code", textContent: code })),
-      h("div", { className: "linkbox" }, inp, h("button", { className: "btn solid", textContent: "복사", onclick: () => copyLink(inp) })),
-      h("p", { className: "tiny", textContent: "링크를 받은 친구는 닉네임만 쓰면 들어와요." })));
+  return h("div", { className: "invitebox" },
+    h("div", { className: "row", style: "justify-content:space-between" }, h("span", { className: "h3", textContent: "친구 초대" }), h("span", { className: "code", textContent: code })),
+    h("div", { className: "linkbox" }, inp, h("button", { className: "btn", textContent: "링크 복사", onclick: () => copyLink(inp) })),
+    h("p", { className: "tiny", textContent: "링크를 받은 친구는 닉네임만 쓰면 바로 직원으로 들어와요." }));
 }
 function rosterCard(title, withScores) {
   const ids = withScores ? (g.order?.length ? g.order : staffIds()) : [...new Set([...staffIds(), ...online])];
@@ -451,28 +457,36 @@ function nowView() {
   const v = g.phase;
   if (v === "lobby") {
     const joined = g.players[me]?.staff, n = staffIds().length;
-    const main = h("div", { className: "card" },
-      h("div", { className: "eyebrow", textContent: "대기실" }),
-      h("h2", { textContent: joined ? "친구들이 오길 기다리는 중" : "이 가게에서 같이 일할래요?", style: "font-size:22px;letter-spacing:-0.03em" }),
-      inviteCard(),
-      !joined ? h("button", { className: "btn solid lg block", textContent: "직원으로 참가", onclick: () => act("join") }) : null,
-      isHost() ? h("label", { className: "field" }, "손님이 나타날 장소 (선택)", h("input", { id: "idea", maxLength: 60, placeholder: "비워두면 랜덤. 예) 우리 회사 탕비실", value: customIdea, oninput: (e) => { customIdea = e.target.value; } })) : null,
-      isHost() ? h("button", { className: "btn solid lg block", disabled: !n, textContent: `첫 손님 받기 · 직원 ${n}명`, onclick: () => act("newCustomer", { idea: customIdea }) })
-        : h("p", { className: "sub", textContent: `진행자 ${nameOf(g.hostId)}님이 첫 손님을 받으면 시작돼요.` }),
+    const main = h("div", { className: "card lobby" },
+      h("div", { style: "display:grid;gap:4px" },
+        h("div", { className: "eyebrow", textContent: "대기실" }),
+        h("h2", { textContent: isHost() ? "친구를 부르고 첫 손님을 받아요" : "곧 손님이 들어와요", style: "font-size:22px;letter-spacing:-0.03em" }),
+        h("p", { className: "sub", textContent: isHost() ? "모두 들어오면 시작하세요. 늦게 온 친구는 다음 손님부터 같이 해요." : `진행자 ${nameOf(g.hostId)}님이 손님을 받으면 시작돼요.` })),
+      inviteBox(),
+      isHost() ? h("div", { className: "startrow" },
+        h("input", { id: "idea", maxLength: 60, placeholder: "손님이 나타날 장소 (비우면 랜덤)", ariaLabel: "손님이 나타날 장소", value: customIdea, oninput: (e) => { customIdea = e.target.value; } }),
+        h("button", { className: "btn solid lg", disabled: !n, textContent: `손님 받기 · ${n}명`, onclick: () => act("newCustomer", { idea: customIdea }) })) : null,
+      h("div", { className: "row", style: "justify-content:space-between" },
+        h("span", { className: "tiny", textContent: joined ? "나는 직원으로 참가 중" : "나는 구경 중" }),
+        h("button", { className: "btn ghost", textContent: joined ? "이번엔 구경만 할게요" : "직원으로 참가", onclick: () => act(joined ? "spectate" : "join") })),
       hostAway(), errEl());
-    return [h("div", { className: "shell" }, main, h("aside", { className: "side" }, rosterCard("참가자", false)))];
+    return [h("div", { className: "shell" }, h("section", { className: "chatcol lobbycol" }, main), h("aside", { className: "side" }, rosterCard("참가자", false)))];
   }
-  if (v === "customer" || v === "reviewing" || !g.customer) return [h("div", { className: "narrow" }, h("div", { className: "card" },
-    h("h2", { textContent: v === "reviewing" ? "손님이 리뷰를 쓰는 중" : "손님이 들어오는 중", style: "font-size:20px" }),
-    h("div", { className: "skel" }, h("i", { style: "width:70%" }), h("i", { style: "width:90%" }), h("i", { style: "width:55%" })),
-    h("p", { className: "tiny", textContent: "보통 3~10초 걸려요." }),
-    isHost() ? h("button", { className: "btn ghost", style: "justify-self:start", textContent: "너무 오래 걸리면 다시 시도", onclick: () => act(v === "reviewing" ? "review" : "newCustomer", { idea: customIdea }) }) : null))];
+  if (v === "customer" || !g.customer) {
+    // 손님 생성 중: 대화 화면과 같은 자리에 뼈대만 (레이아웃 흔들림 방지)
+    const sk = h("div", { className: "custbar" }, h("div", { className: "cb-row", style: "cursor:default" },
+      h("div", { className: "face skelbox" }), h("div", { className: "cb-main" }, h("span", { className: "cb-name", textContent: "손님이 들어오는 중…" }), h("div", { className: "meter" }, h("i", { className: "skelbar", style: "width:100%" })), h("span", { className: "cb-sub", textContent: "보통 3~10초 걸려요" }))));
+    const thread = h("div", { className: "thread", id: "thread" }, h("div", { className: "mc" }, h("div", { className: "face sm skelbox" }), h("div", { className: "bubble typing" }, h("span"), h("span"), h("span"))));
+    const dockEl = h("div", { className: "dock" }, h("div", { className: "panel" }, h("div", { className: "hint" }, h("span", { textContent: "딸랑, 문이 열리고 있어요" }),
+      isHost() ? h("button", { className: "btn ghost", textContent: "너무 오래 걸리면 다시 시도", onclick: () => act("newCustomer", { idea: customIdea }) }) : null), errEl() ? h("div", { className: "hint" }, errEl()) : null));
+    return [h("div", { className: "shell" }, h("section", { className: "chatcol" }, sk, thread, dockEl), h("aside", { className: "side play" }, rosterCard("근무표 · 누적 점수", true)))];
+  }
 
   const c = g.customer, t = g.turn, live = t?.status === "live";
   const rs = g.roundResults || [], cur = current();
   const anger = live ? t.anger : rs.at(-1)?.anger ?? c.anger;
   const sub = live ? `${nameOf(t.player)} 응대 중 · ${t.points || 0}점 · ${t.msgs.filter((m) => m.f === "p").length}/${MAX_LINES}마디`
-    : v === "review" ? `${g.round}번째 손님 · 리뷰 도착` : cur ? `${g.round}번째 손님 · 다음 ${nameOf(cur)}` : `${g.round}번째 손님 · 모두 응대 끝`;
+    : v === "review" ? `${g.round}번째 손님 · 리뷰 도착` : v === "reviewing" ? `${g.round}번째 손님 · 리뷰 쓰는 중` : cur ? `${g.round}번째 손님 · 다음 ${nameOf(cur)}` : `${g.round}번째 손님 · 모두 응대 끝`;
   const clock = live ? h("span", { className: "clock" + (t.thinking ? " paused" : ""), id: "clock", textContent: fmt(remaining(t)) }) : null;
 
   const thread = h("div", { className: "thread", id: "thread" });
@@ -486,6 +500,7 @@ function nowView() {
     thread.append(h("div", { className: "pill", textContent: cur ? `다음 차례 · ${nameOf(cur)}` : "모두 응대했어요" }));
   }
   if (v === "review") thread.append(reviewBox(g.review, rs));
+  if (v === "reviewing") thread.append(h("div", { className: "pill", textContent: "손님이 리뷰를 쓰는 중…" }), h("div", { className: "mc" }, face(anger, "face sm"), h("div", { className: "bubble typing" }, h("span"), h("span"), h("span"))));
 
   const side = h("aside", { className: "side play" },
     h("div", { className: "card tight" }, h("span", { className: "h3", textContent: "오늘의 손님" }), ...customerDetails(c), roleLine(c, "border-top:1px solid var(--border);padding-top:10px")),
@@ -514,6 +529,8 @@ function dock(v, t, live, cur) {
     kids.push(h("div", { className: "hint" }, h("span", { textContent: `${nameOf(cur)}님이 응대를 시작하길 기다리는 중` }), isHost() ? h("button", { className: "btn ghost", textContent: "건너뛰기", onclick: () => act("skip") }) : null));
   } else if (v === "playing") {
     kids.push(isHost() ? h("button", { className: "btn solid lg block", textContent: "손님 리뷰 보기", onclick: () => act("review") }) : h("div", { className: "hint" }, h("span", { textContent: `진행자 ${nameOf(g.hostId)}님이 리뷰를 열면 결과가 나와요.` })));
+  } else if (v === "reviewing") {
+    kids.push(h("div", { className: "hint" }, h("span", { textContent: "손님이 별점을 고르는 중이에요" }), isHost() ? h("button", { className: "btn ghost", textContent: "너무 오래 걸리면 다시 시도", onclick: () => act("review") }) : null));
   } else if (v === "review") {
     kids.push(isHost()
       ? h("div", { className: "compose" }, h("input", { id: "idea2", maxLength: 60, placeholder: "다음 손님 장소 (비우면 랜덤)", value: customIdea, ariaLabel: "다음 손님 장소", oninput: (e) => { customIdea = e.target.value; } }), h("button", { className: "btn solid", textContent: "다음 손님", onclick: () => act("newCustomer", { idea: customIdea }) }))

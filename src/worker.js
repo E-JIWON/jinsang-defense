@@ -74,7 +74,7 @@ export class Room extends DurableObject {
       const id = String(m.id || "").slice(0, 40), nick = String(m.nick || "").trim().slice(0, 12);
       if (!id || !nick) return this.fail(ws, "닉네임을 입력해 주세요.");
       ws.serializeAttachment({ id });
-      g.players[id] = { ...(g.players[id] || { staff: false, joinedAt: Date.now() }), nick };
+      g.players[id] = { ...(g.players[id] || { staff: true, joinedAt: Date.now() }), nick }; // 들어오면 기본은 직원
       if (!g.hostId) g.hostId = id;
       return this.save();
     }
@@ -85,6 +85,7 @@ export class Room extends DurableObject {
 
     switch (m.type) {
       case "join": g.players[me].staff = true; return this.save();
+      case "spectate": g.players[me].staff = false; return this.save();
       case "takeHost": if (!this.online().includes(g.hostId)) { g.hostId = me; return this.save(); } return;
       case "react": {
         if (!REACTS.includes(m.e)) return;
