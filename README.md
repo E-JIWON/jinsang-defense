@@ -2,7 +2,7 @@
 
 > AI가 연기하는 진상 손님을 친구들과 돌아가며 2분씩 말로 달래는 멀티플레이 웹 게임
 
-[![Play](https://img.shields.io/badge/▶_플레이하기-bonchil--jinsang.workers.dev-5a8268?style=for-the-badge)](https://bonchil-jinsang.bonchil-jinsang.workers.dev)
+[![Play](https://img.shields.io/badge/▶_플레이하기-jinsang--defense-5a8268?style=for-the-badge)](https://jinsang-defense.bonchil-jinsang.workers.dev)
 
 ![Cloudflare Workers](https://img.shields.io/badge/Cloudflare_Workers-F38020?logo=cloudflare&logoColor=white)
 ![Durable Objects](https://img.shields.io/badge/Durable_Objects-F38020?logo=cloudflare&logoColor=white)
@@ -13,11 +13,7 @@
 
 로그인 없이 **링크 + 닉네임**만으로 들어와요. 단톡방에 링크를 던지면 바로 시작할 수 있어요.
 
-<p>
-  <img src="docs/play-desktop.png" alt="PC 화면: 대화방과 오늘의 손님·근무표 패널" width="68%">
-  &nbsp;
-  <img src="docs/play-mobile.png" alt="폰 화면: 손님 바, 대화, 입력창" width="27%">
-</p>
+![진상 손님 버티기 플레이 화면: 친구 입장, 손님 등장, 응대와 점수, 리액션, 손님 리뷰, 누적 순위](docs/demo.gif)
 
 ## 어떻게 놀아요
 
@@ -90,8 +86,8 @@ src/
     features/        home(첫 화면·초대 입장) · room(대기실·대화·입력 도크) · history(지난 손님·순위)
     components/      Avatar, Face, Header, Toasts
 e2e/room.e2e.ts      기능 QA: 떠 있는 서버에 여러 명이 붙어 한 판 전체
-public/              파비콘, robots.txt
-docs/                README 스크린샷
+public/              파비콘, 카톡·SNS 공유 이미지(og.png), robots.txt
+docs/                README 데모 GIF
 ```
 
 ## 시작하기

@@ -88,5 +88,13 @@ export function fakeAnswer(kind: AiKind, t?: Turn | null): AiOut {
       anger: Math.max(0, Math.min(100, (t?.anger ?? 50) + (good ? -15 : 12))),
     };
   }
-  return { headline: "가짜 손님이 남긴 가짜 리뷰", items: [{ p: "p1", stars: 3, review: "키를 넣으면 진짜 리뷰를 써 드림." }] };
+  const reviews = [
+    "영수증은 끝까지 조회 안 해 주더니 말은 또 번지르르하네.",
+    "웃으면서 거절하는 거 처음 봄. 기분 나쁜데 반박을 못 하겠음.",
+    "사장 부르라니까 커피를 내옴. 커피는 맛있었음.",
+  ];
+  return {
+    headline: "교환은 못 받았는데 이상하게 또 오고 싶은 매장",
+    items: [1, 2, 3, 4, 5, 6].map((n) => ({ p: `p${n}`, stars: 5 - (n % 3), review: reviews[(n - 1) % reviews.length] })),
+  };
 }
