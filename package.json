@@ -4,10 +4,15 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
-    "test": "node --test"
+    "deploy": "npm run check && wrangler deploy",
+    "test": "node --test test/*.test.ts",
+    "typecheck": "tsc",
+    "types": "wrangler types",
+    "check": "npm run typecheck && npm test"
   },
   "devDependencies": {
+    "@types/node": "^24.19.1",
+    "typescript": "^5.9.3",
     "wrangler": "^4.147.0"
   }
 }
