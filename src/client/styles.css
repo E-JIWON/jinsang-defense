@@ -481,6 +481,16 @@ textarea::placeholder {
   line-height: 1.18;
   letter-spacing: -0.035em;
 }
+.hero-side {
+  display: grid;
+  gap: 22px;
+  min-width: 0;
+}
+.howto {
+  display: grid;
+  gap: 10px;
+  padding: 0 4px;
+}
 .steps {
   display: grid;
   gap: 8px;

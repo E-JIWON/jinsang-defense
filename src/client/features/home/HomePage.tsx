@@ -38,23 +38,6 @@ export function HomePage({ initialNick, onEnter }: Props) {
           2분만 버텨보세요
         </h1>
         <p className="sub">AI가 진상 손님을 연기해요. 한 명씩 돌아가며 말로 달래고, 나머지는 실시간으로 구경하며 리액션을 던져요.</p>
-        <ol className="steps">
-          <li>
-            <span>
-              <b>가게를 열고 </b>링크를 단톡방에 보내요
-            </span>
-          </li>
-          <li>
-            <span>
-              <b>2분씩 응대 </b>한마디마다 점수가 붙어요
-            </span>
-          </li>
-          <li>
-            <span>
-              <b>손님 리뷰 </b>별점과 누적 순위가 나와요
-            </span>
-          </li>
-        </ol>
         <div className="stack">
           <form
             className="entry"
@@ -100,7 +83,30 @@ export function HomePage({ initialNick, onEnter }: Props) {
         </div>
         {error && <p className="err">{error}</p>}
       </div>
-      <PreviewChat />
+      {/* 왼쪽은 시작하는 곳만, 설명은 오른쪽으로 모아 첫눈에 어디서 시작할지 보이게. */}
+      <div className="hero-side">
+        <PreviewChat />
+        <div className="howto">
+          <span className="eyebrow">이렇게 놀아요</span>
+          <ol className="steps">
+            <li>
+              <span>
+                <b>가게를 열고 </b>링크를 단톡방에 보내요
+              </span>
+            </li>
+            <li>
+              <span>
+                <b>2분씩 응대 </b>한마디마다 점수가 붙어요
+              </span>
+            </li>
+            <li>
+              <span>
+                <b>손님 리뷰 </b>별점과 누적 순위가 나와요
+              </span>
+            </li>
+          </ol>
+        </div>
+      </div>
     </div>
   );
 }
