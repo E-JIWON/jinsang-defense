@@ -59,7 +59,7 @@ function CloseShop() {
 
 /** inRoom이 아니면(첫 화면, 초대 입장 화면) 탭과 접속자는 숨긴다. */
 export function Header({ inRoom, tab, onTab }: { inRoom: boolean; tab: Tab; onTab: (t: Tab) => void }) {
-  const { g, rounds, online, connected, isHost } = useRoomContext();
+  const { g, rounds, online, connected, joined, isHost } = useRoomContext();
   const past = pastRounds(rounds, g).length;
   return (
     <header className="top">
@@ -75,7 +75,7 @@ export function Header({ inRoom, tab, onTab }: { inRoom: boolean; tab: Tab; onTa
         </nav>
       )}
       <div className="status">
-        {inRoom && g && (
+        {inRoom && joined && (
           <>
             <span className="faces">
               {online.slice(0, 4).map((id) => (

@@ -126,7 +126,9 @@ export function useRoom(code: string | null, nick: string | null) {
 
   const nameOf = (id: string | null | undefined) => (g && id ? nameIn(g, me, id) : "누군가");
 
-  return { code, g, rounds, online, me, connected, error, floaties, act, nameOf, isHost: !!g && g.hostId === me };
+  // 서버가 이 방에 나를 등록해야 진행자 여부가 확정된다. 그 전에 그리면 진행자 화면과 손님 화면이 번갈아 깜빡인다.
+  const joined = !!g && !!me && !!g.players[me];
+  return { code, g, rounds, online, me, joined, connected, error, floaties, act, nameOf, isHost: joined && g?.hostId === me };
 }
 
 export type RoomApi = ReturnType<typeof useRoom>;
