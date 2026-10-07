@@ -60,7 +60,8 @@ h1, h2, h3, p { margin: 0; text-wrap: balance }
   box-shadow: 0 1px 6px rgb(60 55 45 / .07), inset 0 0 0 1px var(--border); transition: transform .15s cubic-bezier(.34,1.56,.64,1) }
 .btn::after { content: ""; position: absolute; inset: 0; z-index: -1; background-image: var(--grain); background-size: 70px; mix-blend-mode: screen; opacity: var(--grain-opacity); pointer-events: none }
 .btn:active:not(:disabled) { transform: scale(.96) }
-.btn.solid { --c: var(--primary); color: #fff; background: radial-gradient(130% 150% at center, color-mix(in srgb, var(--c) 92%, #fff), var(--c) 72%); box-shadow: 0 4px 16px color-mix(in srgb, var(--c) 30%, transparent) }
+.btn.solid { --c: var(--primary); color: #fff; background: var(--c); box-shadow: 0 1px 2px rgb(20 18 16 / .12), 0 6px 16px color-mix(in srgb, var(--c) 28%, transparent) }
+.btn.solid::after { opacity: .12 }
 .btn.solid:hover { --c: var(--primary-hover) }
 .btn.rust { --c: var(--secondary) }
 .btn.lg { height: 52px; font-size: 16px; font-weight: 700; border-radius: var(--radius-l) }
@@ -99,6 +100,16 @@ input::placeholder, textarea::placeholder { color: var(--ink-4) }
 .steps li { counter-increment: s; display: flex; gap: 10px; align-items: baseline; font-size: 14px; color: var(--ink-3) }
 .steps li::before { content: counter(s); flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--primary-light); color: var(--primary); font-size: 11px; font-weight: 700; display: inline-grid; place-items: center; transform: translateY(-1px) }
 .steps b { color: var(--ink); font-weight: 700 }
+.entry { display: flex; gap: 6px; padding: 6px; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 18px; box-shadow: var(--shadow-s); transition: border-color .2s, box-shadow .2s }
+.entry:focus-within { border-color: color-mix(in srgb, var(--primary) 55%, transparent); box-shadow: 0 0 0 4px var(--primary-subtle) }
+.entry input { border: 0; background: transparent; height: 48px; padding: 0 12px; font-size: 16px; min-width: 0 }
+.entry input:focus-visible { outline: none }
+.entry .btn { height: 48px; padding: 0 22px; border-radius: 13px; font-size: 15px; font-weight: 700; flex: none }
+.alt-entry { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-3); flex-wrap: wrap }
+.alt-entry span { margin-right: 2px }
+.alt-entry input { width: 120px; height: 36px; padding: 0 10px; font: 600 13px var(--mono); letter-spacing: .1em; text-transform: uppercase }
+.alt-entry .btn { height: 36px; padding: 0 14px; font-size: 13px }
+@media (max-width: 420px) { .entry { flex-direction: column } .entry .btn { width: 100% } }
 .preview { background: var(--surface-subtle); border-radius: var(--radius-l); padding: 18px; display: grid; gap: 10px }
 
 /* 손님 바 */
@@ -424,7 +435,7 @@ function previewChat() {
     h("div", { className: "mc" }, face(48, "face sm"), h("div", { className: "body" }, h("div", { className: "bubble", textContent: "요즘 시대에 마음도 조회가 안 돼요?" }), h("div", { className: "meta" }, h("span", { className: "thought", textContent: "속마음 · 말빨 좀 되네" })))));
 }
 function nickInput() {
-  return h("input", { id: "nick-in", maxLength: 12, placeholder: "닉네임 (예: 봉칠)", value: nick, ariaLabel: "닉네임", autocomplete: "nickname" });
+  return h("input", { id: "nick-in", maxLength: 12, placeholder: "내 닉네임", value: nick, ariaLabel: "닉네임", autocomplete: "nickname" });
 }
 // 닉네임을 저장하고 방으로 (페이지 새로고침 없이)
 function enter(roomCode, nickValue) {
@@ -439,7 +450,7 @@ function enter(roomCode, nickValue) {
 }
 function homeView() {
   const nickIn = nickInput();
-  const codeIn = h("input", { id: "code-in", maxLength: 8, placeholder: "친구 가게 코드", autocapitalize: "characters", ariaLabel: "가게 코드" });
+  const codeIn = h("input", { id: "code-in", maxLength: 8, placeholder: "K7QPX", autocapitalize: "characters", ariaLabel: "가게 코드" });
   const open = async () => {
     if (!nickIn.value.trim()) return enter(null, "");
     const r = await fetch("/api/room", { method: "POST" }).then((x) => x.json()).catch(() => null);
@@ -457,10 +468,9 @@ function homeView() {
         h("li", {}, h("span", {}, h("b", { textContent: "가게를 열고 " }), "링크를 단톡방에 보내요")),
         h("li", {}, h("span", {}, h("b", { textContent: "2분씩 응대 " }), "한마디마다 점수가 붙어요")),
         h("li", {}, h("span", {}, h("b", { textContent: "손님 리뷰 " }), "별점과 누적 순위가 나와요"))),
-      h("div", { style: "display:grid;gap:10px" },
-        h("label", { className: "field" }, "내 닉네임", nickIn),
-        h("button", { className: "btn solid lg block", textContent: "새 가게 열기", onclick: open }),
-        h("div", { className: "row", style: "flex-wrap:nowrap" }, codeIn, h("button", { className: "btn", textContent: "코드로 입장", onclick: join }))),
+      h("div", { style: "display:grid;gap:12px" },
+        h("div", { className: "entry" }, nickIn, h("button", { className: "btn solid", textContent: "새 가게 열기", onclick: open })),
+        h("div", { className: "alt-entry" }, h("span", { textContent: "친구 가게 코드가 있다면" }), codeIn, h("button", { className: "btn", textContent: "입장", onclick: join }))),
       errEl()),
     previewChat())];
 }
@@ -478,9 +488,7 @@ function nickView() {
       here.length ? h("div", { className: "row", style: "gap:10px" }, h("span", { className: "faces" }, here.slice(0, 5).map((id) => avatar(id))), h("span", { className: "sub", textContent: `${here.map((id) => g.players[id].nick).slice(0, 3).join(", ")}${here.length > 3 ? ` 외 ${here.length - 3}명` : ""}이 와 있어요` }))
         : h("p", { className: "sub", textContent: g ? "아직 아무도 없어요. 먼저 들어가서 기다려 보세요." : "가게에 연결하는 중…" }),
       h("p", { className: "sub", textContent: "AI가 연기하는 진상 손님을 한 명씩 돌아가며 2분 동안 달래는 게임이에요. 닉네임만 쓰면 바로 직원으로 들어가요." }),
-      h("div", { style: "display:grid;gap:10px" },
-        h("label", { className: "field" }, "내 닉네임", nickIn),
-        h("button", { className: "btn solid lg block", textContent: "가게 들어가기", onclick: go })),
+      h("div", { className: "entry" }, nickIn, h("button", { className: "btn solid", textContent: "가게 들어가기", onclick: go })),
       errEl()),
     previewChat())];
 }
