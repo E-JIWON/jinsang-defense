@@ -56,7 +56,7 @@ export function CustomerBar({ c, anger, sub, turn }: Props) {
           </span>
         </div>
         <Clock turn={turn} />
-        <span className="chev desk-hide">
+        <span className="chev">
           <ChevronDown aria-hidden />
         </span>
       </button>
@@ -68,7 +68,7 @@ export function CustomerBar({ c, anger, sub, turn }: Props) {
         </span>
       </div>
       {open && (
-        <div className="cb-more desk-hide">
+        <div className="cb-more">
           <CustomerDetails c={c} />
         </div>
       )}

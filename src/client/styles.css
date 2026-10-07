@@ -591,9 +591,8 @@ textarea::placeholder {
   position: sticky;
   top: env(safe-area-inset-top, 0px);
   z-index: 5;
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  /* 불투명: 스크롤하면 아래 대화 글씨가 비쳐 읽기 어려웠다. */
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-l);
   box-shadow: var(--shadow-m);
@@ -721,21 +720,13 @@ textarea::placeholder {
   transform: rotate(180deg);
 }
 .brief {
-  background: color-mix(in srgb, var(--surface) 80%, transparent);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-l);
-  padding: 14px 16px;
+  box-shadow: var(--shadow-s);
+  padding: 18px 20px;
   display: grid;
-  gap: 8px;
-}
-.brief p {
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--ink-2);
-}
-.brief p.sub {
-  font-size: 13px;
-  color: var(--ink-3);
+  gap: 12px;
 }
 .role-mini {
   display: flex;
@@ -772,15 +763,31 @@ textarea::placeholder {
   line-height: 1.55;
 }
 @media (min-width: 960px) {
-  .desk-hide {
-    display: none;
-  }
   .role-mini span:last-child {
     white-space: normal;
   }
-  .cb-row {
-    cursor: default;
-  }
+}
+.situation {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.65;
+  color: var(--ink);
+  letter-spacing: -0.015em;
+}
+.cb-more .situation {
+  font-size: 15px;
+}
+.want {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+  padding: 10px 12px;
+  border-radius: var(--radius-m);
+  background: color-mix(in srgb, var(--secondary) 8%, var(--surface));
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink-2);
 }
 .tags {
   display: flex;
