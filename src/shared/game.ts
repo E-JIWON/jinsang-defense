@@ -50,6 +50,8 @@ export interface Turn {
   clock: Clock;
   points: number;
   reacts: number;
+  /** 구경꾼별로 보너스에 들어간 리액션 수. 이전 저장 상태에는 없을 수 있다. */
+  reactBy?: Record<string, number>;
   lastError: string | null;
   endedBy?: Outcome;
   bonus?: number;
@@ -200,6 +202,30 @@ export function endTurn(g: Game, reason: Outcome, now = Date.now()): void {
   g.roundResults.push({ player: t.player, anger: t.anger, endedBy: reason, score: t.score, msgs: t.msgs });
   g.turnIdx += 1;
   archive(g);
+}
+
+/** 구경꾼 한 명이 한 차례 보너스에 보탤 수 있는 리액션 수. 혼자 연타해서 보너스를 다 채우지 못하게. */
+export const REACT_CAP_PER_FRIEND = 3;
+
+/** 보너스에 셀 리액션이면 반영하고 true. 응대하는 본인 리액션과 한도를 넘은 리액션은 세지 않는다. */
+export function countReaction(t: Turn, from: string): boolean {
+  if (t.player === from) return false;
+  const n = t.reactBy?.[from] ?? 0;
+  if (n >= REACT_CAP_PER_FRIEND) return false;
+  t.reactBy = { ...t.reactBy, [from]: n + 1 };
+  t.reacts += 1;
+  return true;
+}
+
+/**
+ * 방이 꽉 찼을 때 자리를 비운다: 접속이 끊겼고, 진행자가 아니며, 응대·점수 기록이 하나도 없는 사람.
+ * 링크만 알면 누구나 들어오니, 이름만 걸어 둔 유령으로 방을 막지 못하게 한다.
+ */
+export function pruneGhosts(g: Game, online: string[]): void {
+  const played = new Set([...g.order, ...Object.keys(g.scores), ...g.rounds.flatMap((r) => r.results.map((x) => x.player))]);
+  for (const id of Object.keys(g.players)) {
+    if (id !== g.hostId && !online.includes(id) && !played.has(id)) delete g.players[id];
+  }
 }
 
 export function skipTurn(g: Game): void {

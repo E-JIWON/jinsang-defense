@@ -2,10 +2,12 @@ import { DurableObject } from "cloudflare:workers";
 import {
   applyReply,
   archive,
+  countReaction,
   endTurn,
   freshGame,
   type Game,
   type Outcome,
+  pruneGhosts,
   REACTS,
   remaining,
   skipTurn,
@@ -185,10 +187,7 @@ export class Room extends DurableObject<Env> {
         if (now - (a.lastReact ?? 0) < REACT_GAP_MS) return;
         ws.serializeAttachment({ ...a, lastReact: now } satisfies Attachment);
         this.sendAll({ type: "react", e: m.e, from: me });
-        if (t?.status === "live" && t.player !== me) {
-          t.reacts += 1;
-          await this.ctx.storage.put("g", g);
-        }
+        if (t?.status === "live" && countReaction(t, me)) await this.ctx.storage.put("g", g);
         return;
       }
       case "newCustomer": {
@@ -325,7 +324,9 @@ export class Room extends DurableObject<Env> {
     if (!TOKEN.test(token)) return this.fail(ws, "새로고침해 주세요.");
     if (!nick) return this.fail(ws, "닉네임을 입력해 주세요.");
     const id = await publicId(token);
-    if (!g.players[id] && Object.keys(g.players).length >= MAX_PLAYERS) return this.fail(ws, "가게가 꽉 찼어요.");
+    const full = () => !g.players[id] && Object.keys(g.players).length >= MAX_PLAYERS;
+    if (full()) pruneGhosts(g, this.online());
+    if (full()) return this.fail(ws, "가게가 꽉 찼어요.");
     ws.serializeAttachment({ ...this.att(ws), id } satisfies Attachment);
     this.sendTo(ws, { type: "you", id });
     g.players[id] = { ...(g.players[id] || { staff: true, joinedAt: Date.now() }), nick };

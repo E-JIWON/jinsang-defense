@@ -51,7 +51,7 @@ export function RankPage() {
             );
           })}
         </div>
-        <p className="tiny">점수 = 한마디마다 받은 응대 점수 합 + 만족 퇴장 30 + 리액션 보너스(최대 20)</p>
+        <p className="tiny">점수 = 한마디마다 받은 응대 점수 합 + 만족 퇴장 30 + 리액션 보너스(최대 20, 구경꾼 한 명당 한 차례 3번)</p>
       </div>
     </div>
   );

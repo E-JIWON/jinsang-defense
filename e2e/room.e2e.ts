@@ -240,3 +240,46 @@ test.skipIf(!process.env.E2E_SLOW)("2분이 지나면 서버가 차례를 끝낸
   assert.equal(p.turn.endedBy, "time");
   p.close();
 });
+
+describe("방 막기 방지", () => {
+  test("유령 30명으로 꽉 찬 방에도 새 사람이 들어온다", async () => {
+    const code = await newRoom();
+    const host = new Player(code, tok("ghost-host"), "주인");
+    await host.hello();
+    const ghosts = Array.from({ length: 29 }, (_, i) => new Player(code, tok(`ghost${i}`), `유령${i}`));
+    await Promise.all(ghosts.map((p) => p.hello()));
+    await until(() => Object.keys(host.game.players).length === 30, "30명");
+    for (const p of ghosts) p.close();
+    await wait(300);
+    const real = new Player(code, tok("ghost-real"), "진짜");
+    await real.hello();
+    assert.ok(real.game.players[real.me ?? ""], "들어옴");
+    assert.ok(real.game.players[host.me ?? ""], "진행자는 남음");
+    host.close();
+    real.close();
+  });
+
+  test("리액션 보너스는 구경꾼 한 명당 한 차례 3번까지", async () => {
+    const code = await newRoom();
+    const a = new Player(code, tok("react-a"), "응대");
+    const b = new Player(code, tok("react-b"), "구경");
+    await a.hello();
+    await b.hello();
+    b.send({ type: "spectate" });
+    await until(() => a.game.players[b.me ?? ""]?.staff === false, "구경 전환");
+    a.send({ type: "newCustomer" });
+    await until(() => a.game.phase === "playing", "손님");
+    a.send({ type: "start" });
+    await until(() => a.game.turn?.status === "live", "시작");
+    for (let i = 0; i < 5; i++) {
+      b.send({ type: "react", e: "🔥" });
+      await wait(300);
+    }
+    await until(() => a.reacts.length === 5, "리액션 5번 전달");
+    a.send({ type: "endTurn" });
+    await until(() => a.game.turn?.status === "done", "차례 끝");
+    assert.equal(a.turn.bonus, 6, "3번 × 2점");
+    a.close();
+    b.close();
+  });
+});

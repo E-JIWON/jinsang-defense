@@ -1,6 +1,18 @@
 import { describe, expect, test } from "vitest";
 import { customer, liveTurn } from "./fixtures";
-import { applyReply, endTurn, freshGame, type Game, parseJson, skipTurn, TURN_MS, type Turn } from "./game";
+import {
+  applyReply,
+  countReaction,
+  endTurn,
+  freshGame,
+  type Game,
+  parseJson,
+  pruneGhosts,
+  REACT_CAP_PER_FRIEND,
+  skipTurn,
+  TURN_MS,
+  type Turn,
+} from "./game";
 
 function playing(): Game & { turn: Turn } {
   return { ...freshGame(), phase: "playing", round: 1, order: ["a", "b"], customer, turn: liveTurn() };
@@ -57,4 +69,24 @@ test("parseJson: 코드펜스·앞뒤 잡담 허용", () => {
   expect(parseJson('```json\n{"a":1}\n```')).toEqual({ a: 1 });
   expect(parseJson('네! {"a":{"b":2}} 끝')).toEqual({ a: { b: 2 } });
   expect(() => parseJson("없음")).toThrow();
+});
+
+test("리액션 보너스: 구경꾼 한 명당 한 차례 3번까지, 응대하는 본인은 안 셈", () => {
+  const t = liveTurn();
+  t.reacts = 0;
+  const counted = Array.from({ length: 10 }, () => countReaction(t, "b")).filter(Boolean).length;
+  expect(counted).toBe(REACT_CAP_PER_FRIEND);
+  expect(countReaction(t, "c")).toBe(true);
+  expect(countReaction(t, "a")).toBe(false);
+  expect(t.reacts).toBe(REACT_CAP_PER_FRIEND + 1);
+});
+
+test("유령 정리: 끊겼고 기록 없는 사람만 지우고 진행자·접속자·응대한 사람은 남김", () => {
+  const g = freshGame();
+  const p = { nick: "x", staff: true, joinedAt: 0 };
+  g.players = { host: p, live: p, played: p, ghost1: p, ghost2: p };
+  g.hostId = "host";
+  g.scores = { played: 12 };
+  pruneGhosts(g, ["live"]);
+  expect(Object.keys(g.players).sort()).toEqual(["host", "live", "played"]);
 });
