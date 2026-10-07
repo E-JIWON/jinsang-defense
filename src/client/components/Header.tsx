@@ -75,7 +75,7 @@ export function Header({ inRoom, tab, onTab }: { inRoom: boolean; tab: Tab; onTa
         </nav>
       )}
       <div className="status">
-        {inRoom && (
+        {inRoom && g && (
           <>
             <span className="faces">
               {online.slice(0, 4).map((id) => (

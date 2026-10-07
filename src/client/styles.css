@@ -142,12 +142,19 @@ p {
   box-shadow: var(--shadow-s);
 }
 .status {
+  justify-content: flex-end;
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 12.5px;
   color: var(--ink-3);
   min-height: 32px;
+}
+/* 접속자 수·가게 정리가 나타나도 가운데 탭이 밀리지 않게 자리를 잡아 둔다. */
+@media (min-width: 601px) {
+  .status {
+    min-width: 180px;
+  }
 }
 @media (max-width: 600px) {
   .tabs {
@@ -1207,6 +1214,16 @@ button.li:hover {
     align-items: stretch;
   }
 }
+.skel-line {
+  display: block;
+  height: 12px;
+  border-radius: 6px;
+}
+.skel-block {
+  border-radius: var(--radius-l);
+}
+.skel-line,
+.skel-block,
 .skelbox,
 .meter .skelbar {
   background: linear-gradient(90deg, var(--surface-subtle), var(--border-strong), var(--surface-subtle));

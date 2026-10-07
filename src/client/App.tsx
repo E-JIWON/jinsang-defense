@@ -28,7 +28,8 @@ export function App() {
   // 초대 링크로 처음 온 사람은 닉네임부터. 그동안에도 방 상태는 받아서 누가 있는지 보여 준다.
   const needNick = !!code && !nick;
   const room = useRoom(code, needNick ? null : nick);
-  const inRoom = !!code && !!room.g && !needNick;
+  // 방 상태가 오기 전에도 탭을 그려 둬야 상태가 도착할 때 머리글이 흔들리지 않는다.
+  const inRoom = !!code && !needNick;
 
   const enter = (roomCode: string, value: string) => {
     const v = value.trim();
