@@ -30,7 +30,9 @@
 html, body { margin: 0; min-height: 100% }
 body { background: var(--desk); background-image: var(--desk-bg); background-attachment: fixed; color: var(--ink); font: 15px/1.6 var(--font); letter-spacing: -0.01em; -webkit-font-smoothing: antialiased; padding: 0 16px }
 button, input, textarea { font: inherit; color: inherit; letter-spacing: inherit }
-h1, h2, h3, p { margin: 0; text-wrap: balance }
+h1, h2, h3, p { margin: 0 }
+h1, h2, h3 { text-wrap: balance }
+p { text-wrap: pretty }
 .app { max-width: 1080px; margin: 0 auto; display: grid; gap: 16px; padding-bottom: 24px }
 
 /* 상단 */
@@ -47,7 +49,7 @@ h1, h2, h3, p { margin: 0; text-wrap: balance }
 
 /* 재질 */
 .card { background: color-mix(in srgb, var(--surface) 86%, transparent); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border: 1px solid var(--border); border-radius: var(--radius-l); box-shadow: var(--shadow-m); padding: 20px; display: grid; gap: 14px; min-width: 0 }
-.card.tight { padding: 16px; gap: 12px }
+.card.tight { padding: 18px; gap: 12px }
 .eyebrow { font-size: 12px; font-weight: 700; color: var(--primary) }
 .sub { color: var(--ink-3); font-size: 14px }
 .tiny { color: var(--ink-4); font-size: 12px }
@@ -125,15 +127,18 @@ input::placeholder, textarea::placeholder { color: var(--ink-4) }
 .cb-sub { font-size: 12px; color: var(--ink-4); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
 .clock { font: 700 18px var(--mono); font-variant-numeric: tabular-nums }
 .clock.low { color: var(--danger) } .clock.paused { color: var(--ink-4) }
-.meter { height: 5px; border-radius: 3px; background: var(--surface-subtle); overflow: hidden }
+.meter { height: 5px; border-radius: 3px; background: #ece9e2; overflow: hidden }
 .meter i { display: block; height: 100%; border-radius: 3px; background: var(--mood); transition: width .7s cubic-bezier(.34,1.56,.64,1), background .4s }
 .chev { color: var(--ink-4); transition: transform .2s; display: grid } .chev svg { width: 16px; height: 16px }
 .custbar.open .chev { transform: rotate(180deg) }
+.side .card p { font-size: 14px; line-height: 1.6; color: var(--ink-2) }
+.side .card p.sub { font-size: 13px; color: var(--ink-3) }
 .cb-more { display: grid; gap: 8px; border-top: 1px solid var(--border); padding-top: 10px; font-size: 13.5px; color: var(--ink-2); line-height: 1.55 }
 @media (min-width: 960px) { .desk-hide { display: none !important } .cb-row { cursor: default } }
 .tags { display: flex; flex-wrap: wrap; gap: 5px }
 .tag { font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--surface-subtle); color: var(--ink-3) }
-.role { display: flex; gap: 8px; align-items: baseline; font-size: 13px; color: var(--ink-3); line-height: 1.5 }
+.role { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; align-items: start; font-size: 13px; color: var(--ink-3); line-height: 1.55 }
+.role .label { margin-top: 1px }
 .role b { color: var(--ink) }
 .label { flex: none; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: var(--primary-light); color: var(--primary) }
 .label.cust { background: color-mix(in srgb, var(--secondary) 13%, transparent); color: var(--secondary) }
@@ -141,7 +146,7 @@ input::placeholder, textarea::placeholder { color: var(--ink-4) }
 /* 대화: 내용이 짧아도 입력 도크는 화면 아래에 */
 .chatcol { min-width: 0; display: grid; grid-template-rows: auto 1fr auto; gap: 4px; min-height: calc(100dvh - 76px) }
 @media (max-width: 600px) { .chatcol { min-height: calc(100dvh - 116px) } }
-.thread { display: grid; gap: 10px; align-content: start; padding: 10px 2px; position: relative; min-height: 160px }
+.thread { display: grid; gap: 10px; align-content: start; padding: 16px 4px; position: relative; min-height: 160px }
 .pill { justify-self: center; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-3); background: color-mix(in srgb, var(--surface) 70%, transparent); border: 1px solid var(--border); padding: 4px 12px; border-radius: 999px; max-width: 100%; text-align: center; margin-top: 4px }
 .pill b { color: var(--ink-2) } .pill .plus { color: var(--primary); font-weight: 700 }
 .fold { justify-self: center; border: 0; background: none; font-size: 12px; font-weight: 600; color: var(--ink-4); cursor: pointer; padding: 2px 8px }
@@ -186,8 +191,9 @@ input::placeholder, textarea::placeholder { color: var(--ink-4) }
 
 /* 목록 */
 .list { display: grid }
-.li { display: flex; align-items: center; gap: 10px; padding: 10px 4px; border: 0; border-top: 1px solid var(--border); background: none; width: 100%; text-align: left; min-width: 0 }
+.li { display: flex; align-items: center; gap: 10px; padding: 10px 8px; border-radius: var(--radius-m); border: 0; border-top: 1px solid var(--border); background: none; width: 100%; text-align: left; min-width: 0 }
 .li:first-child { border-top: 0 }
+.li.now + .li, .li + .li.now { border-top-color: transparent }
 button.li { cursor: pointer } button.li:hover { background: var(--surface-subtle) }
 .li .txt { flex: 1; min-width: 0; display: grid; line-height: 1.4 }
 .li .txt b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
@@ -241,7 +247,7 @@ button.li { cursor: pointer } button.li:hover { background: var(--surface-subtle
 const TURN_MS = 120000, MAX_LINES = 10;
 const REACTS = ["🔥", "😂", "💀", "👏"];
 const OUTCOME = { happy: "만족 퇴장", boom: "손님 폭발", time: "시간 종료", lines: "대화 한도", skip: "자리 비움" };
-const COLORS = ["#5a8268", "#50aac8", "#c8a050", "#c86e82", "#b47850", "#7f77dd", "#5a544e"];
+const COLORS = ["#4a7c59", "#50aac8", "#c8a050", "#c86e82", "#b47850", "#64be8c", "#5a544e"]; // bongchil 디자인 시스템 comment-*-solid
 const $ = (id) => document.getElementById(id);
 function h(tag, props = {}, ...kids) {
   const el = document.createElement(tag);
@@ -258,7 +264,9 @@ function icon(name, fallback = "") {
   const node = window.lucide?.icons?.[pascal(name)];
   return node ? window.lucide.createElement(node) : document.createTextNode(fallback);
 }
-const mood = (a) => `hsl(${Math.round(140 - a * 1.35)} 42% 44%)`;
+const mood = (a) => a <= 50
+  ? `color-mix(in oklab, #5a8268 ${100 - a * 2}%, #c8a050)`
+  : `color-mix(in oklab, #c8a050 ${200 - a * 2}%, #c2607a)`;
 const faceOf = (a) => (a < 20 ? "laugh" : a < 40 ? "smile" : a < 60 ? "meh" : a < 80 ? "frown" : "angry");
 const fmt = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
 const staffOf = (c) => c?.staff || `${c?.place || "가게"} 직원`;
