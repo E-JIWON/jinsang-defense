@@ -29,7 +29,7 @@ export function HomePage({ initialNick, onEnter }: Props) {
   };
 
   return (
-    <div className="card hero">
+    <div className="hero">
       <div className="hero-copy">
         <div className="eyebrow">친구들과 · 2~6명 · 로그인 없이</div>
         <h1>

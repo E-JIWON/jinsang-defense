@@ -16,7 +16,7 @@ export function JoinPage({ onEnter }: { onEnter: (nick: string) => void }) {
     .join(", ");
 
   return (
-    <div className="card hero">
+    <div className="hero">
       <div className="hero-copy">
         <div className="eyebrow">초대받은 가게 · {code}</div>
         <h1>

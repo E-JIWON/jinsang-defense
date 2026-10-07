@@ -457,17 +457,19 @@ textarea::placeholder {
 }
 
 /* 홈 */
+/* 첫 화면은 카드로 감싸지 않고 배경 위에 바로 둔다. 상자가 겹겹이면 무거워 보인다. */
 .hero {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-  gap: 32px;
+  gap: 56px;
   align-items: center;
-  padding: 36px;
+  padding: 48px 0 24px;
 }
 @media (max-width: 859px) {
   .hero {
     grid-template-columns: minmax(0, 1fr);
-    padding: 24px;
+    gap: 36px;
+    padding: 20px 0 8px;
   }
 }
 .hero-copy {
@@ -614,9 +616,11 @@ textarea::placeholder {
   }
 }
 .preview {
-  background: var(--surface-subtle);
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-m);
   border-radius: var(--radius-l);
-  padding: 18px;
+  padding: 20px;
   display: grid;
   gap: 10px;
 }
