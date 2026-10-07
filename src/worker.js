@@ -57,6 +57,7 @@ export class Room extends DurableObject {
     if (req.headers.get("Upgrade") !== "websocket") return new Response("websocket only", { status: 426 });
     const [client, server] = Object.values(new WebSocketPair());
     this.ctx.acceptWebSocket(server);
+    server.send(JSON.stringify({ type: "state", g: this.g, online: this.online() }));
     return new Response(null, { status: 101, webSocket: client });
   }
 

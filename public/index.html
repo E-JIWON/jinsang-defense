@@ -259,7 +259,7 @@ const store = { get: (k) => { try { return localStorage.getItem(k); } catch { re
 const me = store.get("jinsang-id") || (crypto.randomUUID?.() || String(Math.random()).slice(2));
 store.set("jinsang-id", me);
 let nick = store.get("jinsang-nick") || "";
-const code = (location.pathname.match(/^\/r\/([A-Za-z0-9]{4,8})/) || [])[1]?.toUpperCase() || null;
+let code = (location.pathname.match(/^\/r\/([A-Za-z0-9]{4,8})/) || [])[1]?.toUpperCase() || null;
 const roomUrl = () => `${location.origin}/r/${code}`;
 
 let ws = null, g = null, online = [], errMsg = "", connected = false, retry = 0;
@@ -268,7 +268,7 @@ const expanded = new Set();
 
 function connect() {
   ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/${code}`);
-  ws.onopen = () => { connected = true; retry = 0; ws.send(JSON.stringify({ type: "hello", id: me, nick })); };
+  ws.onopen = () => { connected = true; retry = 0; if (nick && !needNick) ws.send(JSON.stringify({ type: "hello", id: me, nick })); };
   ws.onmessage = (ev) => {
     const m = JSON.parse(ev.data);
     if (m.type === "state") {
@@ -415,10 +415,39 @@ function rosterCard(title, withScores) {
 }
 
 /* ---------- 홈 · 닉네임 ---------- */
+// 메인과 초대 입장은 같은 틀: 왼쪽 = 소개 + 닉네임 + 버튼, 오른쪽 = 미리보기
+function previewChat() {
+  return h("div", { className: "preview", ariaHidden: "true" },
+    h("div", { className: "row", style: "gap:10px;flex-wrap:nowrap" }, face(62), h("div", { style: "min-width:0" }, h("b", { textContent: "영수증 없는 교환왕", style: "display:block;font-size:14px" }), h("span", { className: "tiny", textContent: "휴대폰 매장 · 분노 62" }))),
+    h("div", { className: "mc" }, face(62, "face sm"), h("div", { className: "body" }, h("div", { className: "bubble", textContent: "교환해 줘요. 영수증은 마음속에 있어요." }))),
+    h("div", { className: "mp" }, h("div", { className: "bubble", textContent: "마음속 영수증은 저희 시스템에서 조회가 안 돼요 ㅠㅠ" }), h("div", { className: "meta" }, h("span", { className: "chip good", textContent: "+14 · 센스 만점" }))),
+    h("div", { className: "mc" }, face(48, "face sm"), h("div", { className: "body" }, h("div", { className: "bubble", textContent: "요즘 시대에 마음도 조회가 안 돼요?" }), h("div", { className: "meta" }, h("span", { className: "thought", textContent: "속마음 · 말빨 좀 되네" })))));
+}
+function nickInput() {
+  return h("input", { id: "nick-in", maxLength: 12, placeholder: "닉네임 (예: 봉칠)", value: nick, ariaLabel: "닉네임", autocomplete: "nickname" });
+}
+// 닉네임을 저장하고 방으로 (페이지 새로고침 없이)
+function enter(roomCode, nickValue) {
+  const v = (nickValue || "").trim();
+  if (!v) { errMsg = "닉네임을 먼저 적어 주세요."; render(); $("nick-in")?.focus(); return false; }
+  nick = v; store.set("jinsang-nick", v); errMsg = "";
+  needNick = false;
+  if (code !== roomCode) { code = roomCode; g = null; online = []; history.pushState(null, "", "/r/" + roomCode); }
+  if (ws?.readyState === 1) ws.send(JSON.stringify({ type: "hello", id: me, nick })); else if (!ws) connect();
+  render(); window.scrollTo(0, 0);
+  return true;
+}
 function homeView() {
-  const codeIn = h("input", { id: "code-in", maxLength: 8, placeholder: "가게 코드 (예: K7QPX)", autocapitalize: "characters", ariaLabel: "가게 코드" });
-  const go = () => { const c = codeIn.value.trim().toUpperCase(); if (/^[A-Z0-9]{4,8}$/.test(c)) location.href = "/r/" + c; };
-  codeIn.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.isComposing) go(); });
+  const nickIn = nickInput();
+  const codeIn = h("input", { id: "code-in", maxLength: 8, placeholder: "친구 가게 코드", autocapitalize: "characters", ariaLabel: "가게 코드" });
+  const open = async () => {
+    if (!nickIn.value.trim()) return enter(null, "");
+    const r = await fetch("/api/room", { method: "POST" }).then((x) => x.json()).catch(() => null);
+    if (r?.code) enter(r.code, nickIn.value); else { errMsg = "가게를 열지 못했어요. 다시 눌러 주세요."; render(); }
+  };
+  const join = () => { const c = codeIn.value.trim().toUpperCase(); if (/^[A-Z0-9]{4,8}$/.test(c)) enter(c, nickIn.value); else { errMsg = "가게 코드를 확인해 주세요."; render(); } };
+  nickIn.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.isComposing) open(); });
+  codeIn.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.isComposing) join(); });
   return [h("div", { className: "card hero" },
     h("div", { style: "display:grid;gap:18px;min-width:0" },
       h("div", { className: "eyebrow", textContent: "친구들과 · 2~6명 · 로그인 없이" }),
@@ -428,27 +457,32 @@ function homeView() {
         h("li", {}, h("span", {}, h("b", { textContent: "가게를 열고 " }), "링크를 단톡방에 보내요")),
         h("li", {}, h("span", {}, h("b", { textContent: "2분씩 응대 " }), "한마디마다 점수가 붙어요")),
         h("li", {}, h("span", {}, h("b", { textContent: "손님 리뷰 " }), "별점과 누적 순위가 나와요"))),
-      h("button", { className: "btn solid lg block", textContent: "새 가게 열기", onclick: async () => {
-        const r = await fetch("/api/room", { method: "POST" }).then((x) => x.json()).catch(() => null);
-        if (r?.code) location.href = "/r/" + r.code; else { errMsg = "가게를 열지 못했어요. 다시 눌러 주세요."; render(); }
-      } }),
-      h("div", { className: "row", style: "flex-wrap:nowrap" }, codeIn, h("button", { className: "btn", textContent: "입장", onclick: go })),
+      h("div", { style: "display:grid;gap:10px" },
+        h("label", { className: "field" }, "내 닉네임", nickIn),
+        h("button", { className: "btn solid lg block", textContent: "새 가게 열기", onclick: open }),
+        h("div", { className: "row", style: "flex-wrap:nowrap" }, codeIn, h("button", { className: "btn", textContent: "코드로 입장", onclick: join }))),
       errEl()),
-    h("div", { className: "preview", ariaHidden: "true" },
-      h("div", { className: "row", style: "gap:10px;flex-wrap:nowrap" }, face(62), h("div", { style: "min-width:0" }, h("b", { textContent: "영수증 없는 교환왕", style: "display:block;font-size:14px" }), h("span", { className: "tiny", textContent: "휴대폰 매장 · 분노 62" }))),
-      h("div", { className: "mc" }, face(62, "face sm"), h("div", { className: "body" }, h("div", { className: "bubble", textContent: "교환해 줘요. 영수증은 마음속에 있어요." }))),
-      h("div", { className: "mp" }, h("div", { className: "bubble", textContent: "마음속 영수증은 저희 시스템에서 조회가 안 돼요 ㅠㅠ" }), h("div", { className: "meta" }, h("span", { className: "chip good", textContent: "+14 · 센스 만점" }))),
-      h("div", { className: "mc" }, face(48, "face sm"), h("div", { className: "body" }, h("div", { className: "bubble", textContent: "요즘 시대에 마음도 조회가 안 돼요?" }), h("div", { className: "meta" }, h("span", { className: "thought", textContent: "속마음 · 말빨 좀 되네" }))))))];
+    previewChat())];
 }
+// 초대 링크로 들어온 친구: 메인과 같은 틀에 "누가 불렀는지 · 누가 와 있는지"
 function nickView() {
-  const inp = h("input", { id: "nick-in", maxLength: 12, placeholder: "예) 봉칠", value: nick });
-  const go = () => { const v = inp.value.trim(); if (!v) return; nick = v; store.set("jinsang-nick", v); connect(); render(); };
-  inp.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.isComposing) go(); });
-  return [h("div", { className: "narrow", style: "max-width:420px;padding-top:6vh" }, h("div", { className: "card" },
-    h("div", { className: "eyebrow", textContent: "가게 코드 " + code }),
-    h("h2", { textContent: "이 가게에서 뭐라고 불릴까요?", style: "font-size:22px;letter-spacing:-0.03em" }),
-    h("label", { className: "field" }, "닉네임", inp),
-    h("button", { className: "btn solid lg block", textContent: "입장", onclick: go })))];
+  const nickIn = nickInput();
+  const go = () => enter(code, nickIn.value);
+  nickIn.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.isComposing) go(); });
+  const host = g?.players?.[g.hostId]?.nick;
+  const here = online.filter((id) => g?.players?.[id]);
+  return [h("div", { className: "card hero" },
+    h("div", { style: "display:grid;gap:18px;min-width:0" },
+      h("div", { className: "eyebrow", textContent: "초대받은 가게 · " + code }),
+      h("h1", { textContent: host ? `${host}님이\n같이 손님 받자고 해요` : "진상 손님 가게에\n초대받았어요", style: "white-space:pre-line" }),
+      here.length ? h("div", { className: "row", style: "gap:10px" }, h("span", { className: "faces" }, here.slice(0, 5).map((id) => avatar(id))), h("span", { className: "sub", textContent: `${here.map((id) => g.players[id].nick).slice(0, 3).join(", ")}${here.length > 3 ? ` 외 ${here.length - 3}명` : ""}이 와 있어요` }))
+        : h("p", { className: "sub", textContent: g ? "아직 아무도 없어요. 먼저 들어가서 기다려 보세요." : "가게에 연결하는 중…" }),
+      h("p", { className: "sub", textContent: "AI가 연기하는 진상 손님을 한 명씩 돌아가며 2분 동안 달래는 게임이에요. 닉네임만 쓰면 바로 직원으로 들어가요." }),
+      h("div", { style: "display:grid;gap:10px" },
+        h("label", { className: "field" }, "내 닉네임", nickIn),
+        h("button", { className: "btn solid lg block", textContent: "가게 들어가기", onclick: go })),
+      errEl()),
+    previewChat())];
 }
 
 /* ---------- 지금 가게 ---------- */
@@ -609,13 +643,16 @@ function render() {
   const focused = document.activeElement?.id;
   const typed = Object.fromEntries([...view.querySelectorAll("input,textarea")].map((el) => [el.id, el.value]));
   const wasNear = nearBottom();
-  view.replaceChildren(...(!code ? homeView() : !nick || !ws ? nickView() : tab === "past" ? pastView() : tab === "rank" ? rankView() : nowView()).filter(Boolean));
+  view.replaceChildren(...(!code ? homeView() : needNick ? nickView() : tab === "past" ? pastView() : tab === "rank" ? rankView() : nowView()).filter(Boolean));
   for (const [id, val] of Object.entries(typed)) { const el = $(id); if (el && val && !el.readOnly) el.value = val; }
   if (focused && $(focused) && !$(focused).disabled) $(focused).focus({ preventScroll: true });
   if (tab === "now" && g?.turn?.status === "live" && (wasNear || isResponder())) stickBottom(true);
 }
 $("brand-ic").replaceChildren(icon("store", ""));
-if (code && nick) connect();
+// 초대 링크로 처음 온 사람은 닉네임부터. 방 상태는 미리 받아서 누가 있는지 보여준다
+let needNick = !!code && !nick;
+if (code) connect();
+addEventListener("popstate", () => location.reload());
 render();
 </script>
 </body>
