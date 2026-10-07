@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>진상 손님 버티기</title>
 <meta name="description" content="AI가 연기하는 진상 손님을 친구들과 돌아가며 2분씩 달래는 멀티플레이 게임">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
 /* layout: 단톡방 구조. PC = 대화 열 + 오른쪽 가게 패널, 폰(<960px) = 한 열
@@ -36,7 +37,7 @@ p { text-wrap: pretty }
 .app { max-width: 1080px; margin: 0 auto; display: grid; gap: 16px; padding-bottom: 24px }
 
 /* 상단 */
-.top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding-block: 16px 4px }
+.top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding-block: 16px 4px; min-height: 66px }
 .brand { display: flex; align-items: center; gap: 9px; font-weight: 800; font-size: 16px; letter-spacing: -0.03em; color: inherit; text-decoration: none; margin-right: auto }
 .brand i { width: 30px; height: 30px; border-radius: var(--radius-m); background: var(--primary); color: #fff; display: grid; place-items: center }
 .brand i svg { width: 17px; height: 17px }
@@ -44,7 +45,7 @@ p { text-wrap: pretty }
 .tab { border: 0; background: none; font-size: 13px; font-weight: 600; color: var(--ink-3); padding: 6px 14px; border-radius: 999px; cursor: pointer; white-space: nowrap }
 .tab small { color: var(--ink-4); margin-left: 3px; font-size: 11px }
 .tab.on { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-s) }
-.status { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-3) }
+.status { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-3); min-height: 32px }
 @media (max-width: 600px) { .tabs { order: 3; width: 100%; justify-content: center } }
 
 /* 재질 */
@@ -52,7 +53,7 @@ p { text-wrap: pretty }
 .card.tight { padding: 18px; gap: 12px }
 .eyebrow { font-size: 12px; font-weight: 700; color: var(--primary) }
 .sub { color: var(--ink-3); font-size: 14px }
-.tiny { color: var(--ink-4); font-size: 12px }
+.tiny { color: var(--ink-3); font-size: 12px }
 .err { color: var(--danger); font-size: 13px; font-weight: 600 }
 .h3 { font-size: 14px; font-weight: 700 }
 
@@ -71,6 +72,7 @@ p { text-wrap: pretty }
 .btn.ghost { background: none; box-shadow: none; color: var(--ink-3); height: auto; padding: 4px 2px; font-size: 13px }
 .btn.ghost::after { display: none }
 .btn.ghost:hover { color: var(--ink) }
+@media (pointer: coarse) { .btn.ghost { min-height: 44px; padding: 0 8px } }
 .btn.icon { width: 44px; height: 44px; padding: 0; border-radius: 50%; flex: none }
 .btn:disabled { opacity: .45; cursor: default }
 .btn:focus-visible, .tab:focus-visible, input:focus-visible, textarea:focus-visible, .cb-row:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px }
@@ -125,9 +127,9 @@ input::placeholder, textarea::placeholder { color: var(--ink-4) }
 @keyframes shake { 20% { transform: translateX(-4px) rotate(-5deg) } 40% { transform: translateX(4px) rotate(4deg) } 60% { transform: translateX(-3px) } 80% { transform: translateX(2px) } }
 .cb-main { flex: 1; min-width: 0; display: grid; gap: 4px }
 .cb-name { font-weight: 700; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0 }
-.cb-sub { font-size: 12px; color: var(--ink-4); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.cb-sub { font-size: 12px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
 .clock { font: 700 18px var(--mono); font-variant-numeric: tabular-nums }
-.clock.low { color: var(--danger) } .clock.paused { color: var(--ink-4) }
+.clock.low { color: var(--danger) } .clock.paused { color: var(--ink-4) } .clock.idle { color: var(--ink-5) }
 .meter { height: 5px; border-radius: 3px; background: #ece9e2; overflow: hidden }
 .meter i { display: block; height: 100%; border-radius: 3px; background: var(--mood); transition: width .7s cubic-bezier(.34,1.56,.64,1), background .4s }
 .chev { color: var(--ink-4); transition: transform .2s; display: grid } .chev svg { width: 16px; height: 16px }
@@ -143,8 +145,8 @@ input::placeholder, textarea::placeholder { color: var(--ink-4) }
 .role { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; align-items: start; font-size: 13px; color: var(--ink-3); line-height: 1.55 }
 .role .label { margin-top: 1px }
 .role b { color: var(--ink) }
-.label { flex: none; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: var(--primary-light); color: var(--primary) }
-.label.cust { background: color-mix(in srgb, var(--secondary) 13%, transparent); color: var(--secondary) }
+.label { flex: none; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: var(--primary-light); color: #3d6650 }
+.label.cust { background: color-mix(in srgb, var(--secondary) 13%, transparent); color: #9a5021 }
 
 /* 대화: 내용이 짧아도 입력 도크는 화면 아래에 */
 .chatcol { min-width: 0; display: grid; grid-template-rows: auto 1fr auto; gap: 4px; min-height: calc(100dvh - 76px) }
@@ -152,20 +154,20 @@ input::placeholder, textarea::placeholder { color: var(--ink-4) }
 .thread { display: grid; gap: 10px; align-content: start; padding: 16px 4px; position: relative; min-height: 160px }
 .pill { justify-self: center; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-3); background: color-mix(in srgb, var(--surface) 70%, transparent); border: 1px solid var(--border); padding: 4px 12px; border-radius: 999px; max-width: 100%; text-align: center; margin-top: 4px }
 .pill b { color: var(--ink-2) } .pill .plus { color: var(--primary); font-weight: 700 }
-.fold { justify-self: center; border: 0; background: none; font-size: 12px; font-weight: 600; color: var(--ink-4); cursor: pointer; padding: 2px 8px }
+.fold { justify-self: center; border: 0; background: none; font-size: 12px; font-weight: 600; color: var(--ink-3); cursor: pointer; padding: 2px 8px }
 .fold:hover { color: var(--ink-2) }
 .mc { display: flex; gap: 8px; align-items: flex-end; max-width: 84% }
 .mc .body, .mp { display: grid; gap: 4px; min-width: 0 }
 .mp { justify-self: end; justify-items: end; max-width: 84% }
 .bubble { padding: 9px 14px; font-size: 15px; line-height: 1.6; overflow-wrap: anywhere; border-radius: 18px }
 .mc .bubble { background: var(--surface); border: 1px solid var(--border); border-bottom-left-radius: 6px; box-shadow: var(--shadow-s) }
-.mp .bubble { background: var(--primary); color: #fff; border-bottom-right-radius: 6px }
-.mp .who { font-size: 11.5px; color: var(--ink-4); font-weight: 600 }
-.meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; color: var(--ink-4) }
+.mp .bubble { background: var(--primary-hover); color: #fff; border-bottom-right-radius: 6px }
+.mp .who { font-size: 11.5px; color: var(--ink-3); font-weight: 600 }
+.meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; color: var(--ink-3) }
 .meta .act { font-style: italic }
-.meta .thought { color: var(--secondary) }
+.meta .thought { color: #9a5021 }
 .chip { font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 999px; background: var(--surface-subtle); color: var(--ink-3); font-variant-numeric: tabular-nums }
-.chip.good { background: var(--primary-light); color: var(--primary) }
+.chip.good { background: var(--primary-light); color: #3d6650 }
 .chip.bad { background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger) }
 .typing { display: inline-flex; gap: 4px; padding: 13px 16px !important } .typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-4); animation: dot 1s infinite } .typing span:nth-child(2) { animation-delay: .15s } .typing span:nth-child(3) { animation-delay: .3s }
 @keyframes dot { 50% { transform: translateY(-4px); opacity: .5 } }
@@ -204,7 +206,7 @@ button.li { cursor: pointer } button.li:hover { background: var(--surface-subtle
 .li .no { font: 700 14px var(--mono); color: var(--ink-4); width: 20px; text-align: center }
 .li.now { background: var(--primary-subtle); border-radius: var(--radius-m) }
 .badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--surface-subtle); color: var(--ink-3); white-space: nowrap }
-.badge.ok { background: var(--primary-light); color: var(--primary) }
+.badge.ok { background: var(--primary-light); color: #3d6650 }
 .badge.host { background: color-mix(in srgb, var(--sand) 20%, transparent); color: #7d6223 }
 
 /* 대기실 */
@@ -446,7 +448,7 @@ function previewChat() {
     h("div", { className: "mc" }, face(48, "face sm"), h("div", { className: "body" }, h("div", { className: "bubble", textContent: "요즘 시대에 마음도 조회가 안 돼요?" }), h("div", { className: "meta" }, h("span", { className: "thought", textContent: "속마음 · 말빨 좀 되네" })))));
 }
 function nickInput() {
-  return h("input", { id: "nick-in", maxLength: 12, placeholder: "내 닉네임", value: nick, ariaLabel: "닉네임", autocomplete: "nickname" });
+  return h("input", { id: "nick-in", maxLength: 12, placeholder: "내 닉네임", value: nick, ariaLabel: "닉네임", autocomplete: "off" });
 }
 // 닉네임을 저장하고 방으로 (페이지 새로고침 없이)
 function enter(roomCode, nickValue) {
@@ -528,7 +530,7 @@ function nowView() {
   if (v === "customer" || !g.customer) {
     // 손님 생성 중: 대화 화면과 같은 자리에 뼈대만 (레이아웃 흔들림 방지)
     const sk = h("div", { className: "custbar" }, h("div", { className: "cb-row", style: "cursor:default" },
-      h("div", { className: "face skelbox" }), h("div", { className: "cb-main" }, h("span", { className: "cb-name", textContent: "손님이 들어오는 중…" }), h("div", { className: "meter" }, h("i", { className: "skelbar", style: "width:100%" })), h("span", { className: "cb-sub", textContent: "보통 3~10초 걸려요" }))));
+      h("div", { className: "face skelbox" }), h("div", { className: "cb-main" }, h("span", { className: "cb-name", textContent: "손님이 들어오는 중…" }), h("div", { className: "meter" }, h("i", { className: "skelbar", style: "width:100%" })), h("span", { className: "cb-sub", textContent: "보통 3~10초 걸려요" })), h("span", { className: "clock idle", textContent: fmt(TURN_MS) })));
     const thread = h("div", { className: "thread", id: "thread" }, h("div", { className: "mc" }, h("div", { className: "face sm skelbox" }), h("div", { className: "bubble typing" }, h("span"), h("span"), h("span"))));
     const dockEl = h("div", { className: "dock" }, h("div", { className: "panel" }, h("div", { className: "hint" }, h("span", { textContent: "딸랑, 문이 열리고 있어요" }),
       isHost() ? h("button", { className: "btn ghost", textContent: "너무 오래 걸리면 다시 시도", onclick: () => act("newCustomer", { idea: customIdea }) }) : null), errEl() ? h("div", { className: "hint" }, errEl()) : null));
@@ -540,7 +542,7 @@ function nowView() {
   const anger = live ? t.anger : rs.at(-1)?.anger ?? c.anger;
   const sub = live ? `${nameOf(t.player)} 응대 중 · ${t.points || 0}점 · ${t.msgs.filter((m) => m.f === "p").length}/${MAX_LINES}마디`
     : v === "review" ? `${g.round}번째 손님 · 리뷰 도착` : v === "reviewing" ? `${g.round}번째 손님 · 리뷰 쓰는 중` : cur ? `${g.round}번째 손님 · 다음 ${nameOf(cur)}` : `${g.round}번째 손님 · 모두 응대 끝`;
-  const clock = live ? h("span", { className: "clock" + (t.thinking ? " paused" : ""), id: "clock", textContent: fmt(remaining(t)) }) : null;
+  const clock = live ? h("span", { className: "clock" + (t.thinking ? " paused" : ""), id: "clock", textContent: fmt(remaining(t)) }) : h("span", { className: "clock idle", textContent: fmt(TURN_MS) });
 
   const thread = h("div", { className: "thread", id: "thread" });
   if (!rs.length && !live) thread.append(h("div", { className: "pill", textContent: `${c.name} 손님이 들어왔어요` }));
@@ -571,7 +573,7 @@ function dock(v, t, live, cur) {
       onkeydown: (e) => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(); } } });
     const send = () => { const val = ta.value.trim(); if (val) { ta.value = ""; act("say", { text: val }); stickBottom(true); } };
     kids.push(h("div", { className: "compose" }, ta, h("button", { className: "btn solid icon", ariaLabel: "보내기", disabled: !!t.thinking, onclick: send }, icon("arrow-up", "↑"))));
-    kids.push(h("div", { className: "hint" }, h("span", { textContent: t.thinking ? "손님이 생각하는 중이에요. 시계가 멈춰 있어요." : `${staffOf(g.customer)}로 응대 중 · Enter로 보내기` }), h("button", { className: "btn ghost", textContent: "그만하기", onclick: () => act("endTurn") })));
+    kids.push(h("div", { className: "hint" }, h("span", { textContent: t.thinking ? "손님이 생각하는 중 · 시계 멈춤" : "Enter로 보내기 · 생각하는 동안 시계 멈춤" }), h("button", { className: "btn ghost", textContent: "그만하기", onclick: () => act("endTurn") })));
   } else if (live) {
     kids.push(h("div", { className: "reacts" }, h("span", { textContent: `${nameOf(t.player)}님 응대 구경 중` }),
       REACTS.map((e) => h("button", { className: "btn", textContent: e, ariaLabel: "리액션 " + e, onclick: () => act("react", { e }) }))));
