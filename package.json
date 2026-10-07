@@ -3,17 +3,33 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "npm run check && wrangler deploy",
-    "test": "node --test test/game.test.ts",
-    "typecheck": "tsc",
-    "types": "wrangler types",
-    "check": "npm run typecheck && npm test",
-    "e2e": "node --test test/e2e.ts"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "npm run build && vite preview",
+    "deploy": "npm run check && npm run build && wrangler deploy",
+    "check": "npm run lint && npm run typecheck && npm test",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "typecheck": "tsc -b",
+    "test": "vitest run --project unit",
+    "e2e": "vitest run --project e2e",
+    "types": "wrangler types"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.5.15",
+    "@cloudflare/vite-plugin": "^1.63.0",
     "@types/node": "^24.19.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
     "typescript": "^5.9.3",
-    "wrangler": "^4.147.0"
+    "vite": "^8.3.3",
+    "vitest": "^5.0.3",
+    "wrangler": "^4.148.0"
+  },
+  "dependencies": {
+    "lucide-react": "^1.52.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
   }
 }

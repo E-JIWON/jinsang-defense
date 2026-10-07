@@ -6,6 +6,8 @@
 
 ![Cloudflare Workers](https://img.shields.io/badge/Cloudflare_Workers-F38020?logo=cloudflare&logoColor=white)
 ![Durable Objects](https://img.shields.io/badge/Durable_Objects-F38020?logo=cloudflare&logoColor=white)
+![React](https://img.shields.io/badge/React_19-149ECA?logo=react&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
 ![Gemini](https://img.shields.io/badge/Gemini_API-8E75B2?logo=googlegemini&logoColor=white)
 
@@ -44,10 +46,10 @@
 | 영역 | 사용 |
 |---|---|
 | 서버 | Cloudflare Workers, Durable Objects(SQLite), WebSocket Hibernation API |
-| 언어 | TypeScript(strict). 빌드 단계 없이 wrangler와 Node가 그대로 실행 |
+| 언어 | TypeScript(strict). 화면·서버가 `src/shared`의 타입과 메시지 프로토콜을 같이 써요 |
 | AI | OpenAI 호환 `/chat/completions` (기본 Gemini, Groq나 Ollama로 교체 가능) |
-| 화면 | 바닐라 JS + CSS, [Lucide](https://lucide.dev) 아이콘, [Pretendard](https://github.com/orioncactus/pretendard) |
-| 테스트 | `node:test` (규칙 단위 테스트 + 서버 기능 e2e) |
+| 화면 | React 19, Vite + [Cloudflare Vite 플러그인](https://developers.cloudflare.com/workers/vite-plugin/), [Lucide](https://lucide.dev), [Pretendard](https://github.com/orioncactus/pretendard) |
+| 품질 | [Biome](https://biomejs.dev)(린트·포맷), [Vitest](https://vitest.dev)(규칙 단위 테스트 + 서버 기능 e2e) |
 
 ## 구조
 
@@ -72,17 +74,24 @@ sequenceDiagram
 ```
 
 ```
-public/            화면 (빌드 없이 그대로 서빙)
-  index.html       뼈대
-  app.css          디자인 토큰, PC 2단 / 폰 1단
-  app.js           렌더링 + 웹소켓. 규칙 값은 서버가 내려주는 config를 쓴다
 src/
-  game.ts          규칙: 타입, 점수, 끝 조건, 프롬프트 (순수 함수)
-  worker.ts        Room(상태·실시간·타이머·AI 호출), Limiter(호출 한도)
-test/
-  game.test.ts     규칙 단위 테스트
-  e2e.ts           기능 QA: 떠 있는 서버에 여러 명이 붙어 한 판 전체
-docs/              README 스크린샷
+  shared/            화면과 서버가 같이 쓰는 코드
+    game.ts          규칙: 타입, 점수, 끝 조건 (순수 함수)
+    protocol.ts      웹소켓 메시지 타입 (ClientMessage / ServerMessage)
+  worker/            Cloudflare Worker
+    index.ts         라우터 (/api/room, /ws/:code, 나머지는 화면)
+    room.ts          Room: 방 상태, 실시간, 2분 타이머, AI 호출
+    limiter.ts       Limiter: IP·방·하루 전체 호출 한도
+    ai.ts            OpenAI 호환 호출, 예비 모델, 가짜 손님
+    prompts.ts       손님 만들기 · 대답 · 리뷰 프롬프트
+  client/            React 화면
+    App.tsx          라우팅(/, /r/:code)과 탭
+    hooks/useRoom.ts 웹소켓 연결, 재연결, 입장 전 동작 모아 두기
+    features/        home(첫 화면·초대 입장) · room(대기실·대화·입력 도크) · history(지난 손님·순위)
+    components/      Avatar, Face, Header, Toasts
+e2e/room.e2e.ts      기능 QA: 떠 있는 서버에 여러 명이 붙어 한 판 전체
+public/              파비콘, robots.txt
+docs/                README 스크린샷
 ```
 
 ## 시작하기
@@ -90,7 +99,7 @@ docs/              README 스크린샷
 ```bash
 npm install
 cp .dev.vars.example .dev.vars   # LLM_API_KEY에 Gemini 키 (없으면 가짜 손님으로 동작)
-npm run dev                       # http://localhost:8787
+npm run dev                       # http://localhost:5173 (화면 + Worker 한 번에)
 ```
 
 Gemini 키는 [Google AI Studio](https://aistudio.google.com/apikey)에서 무료로 받을 수 있어요.
@@ -98,10 +107,10 @@ Gemini 키는 [Google AI Studio](https://aistudio.google.com/apikey)에서 무�
 ## 테스트
 
 ```bash
-npm run check                     # 타입 검사 + 규칙 테스트
+npm run check                     # 린트 + 타입 검사 + 규칙 테스트
 
-# 기능 QA (가짜 AI라 무료 한도를 쓰지 않음)
-npx wrangler dev --port 8789 --var LLM_FAKE:1
+# 기능 QA: 빌드한 결과를 가짜 AI로 띄워서 확인 (무료 한도를 쓰지 않음)
+npm run build && npx wrangler dev --port 8789 --var LLM_FAKE:1
 BASE=http://localhost:8789 npm run e2e   # E2E_SLOW=1 이면 2분 시간 종료까지
 ```
 
@@ -112,7 +121,7 @@ e2e는 입장, 진행자 사칭 차단, 권한, 손님 입장, 응대, 리액션
 ```bash
 npx wrangler login
 npx wrangler secret put LLM_API_KEY
-npm run deploy                    # check를 통과해야 올라가요
+npm run deploy                    # check를 통과해야 빌드하고 올라가요
 ```
 
 `wrangler.jsonc`를 바꾸면 `npm run types`로 `worker-configuration.d.ts`를 다시 만들어요.
