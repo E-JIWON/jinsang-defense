@@ -12,6 +12,7 @@ src/               Cloudflare Worker (TypeScript, wrangler가 그대로 번들)
   game.ts          규칙: 타입, 점수, 끝 조건, 프롬프트. 순수 함수만
   worker.ts        방(Durable Object) = 상태·실시간·타이머·AI 호출, Limiter = 호출 한도
 test/game.test.ts  규칙 테스트 (node --test, 타입은 Node가 그대로 벗겨서 실행)
+test/e2e.ts        기능 QA: 떠 있는 서버에 웹소켓으로 붙어 한 판 전체
 ```
 
 ## 로컬
@@ -19,7 +20,14 @@ test/game.test.ts  규칙 테스트 (node --test, 타입은 Node가 그대로 �
 ```bash
 npm install
 npm run dev        # http://localhost:8787
-npm run check      # 타입 검사 + 테스트
+npm run check      # 타입 검사 + 규칙 테스트
+```
+
+기능 QA(서버에 여러 명이 붙어 한 판 전체를 확인, 가짜 AI라 한도 안 씀):
+
+```bash
+npx wrangler dev --port 8789 --var LLM_FAKE:1
+BASE=http://localhost:8789 npm run e2e            # E2E_SLOW=1 이면 2분 시간 종료까지
 ```
 
 키가 없으면 가짜 손님으로 돌아간다. 진짜 AI는 `.dev.vars.example`을 `.dev.vars`로 복사하고 키를 넣는다.
