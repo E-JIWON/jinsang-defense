@@ -2,7 +2,7 @@
 
 > AI가 연기하는 진상 손님을 친구들과 돌아가며 2분씩 말로 달래는 멀티플레이 웹 게임
 
-[![Play](https://img.shields.io/badge/▶_플레이하기-jinsang--defense-5a8268?style=for-the-badge)](https://jinsang-defense.bonchil-jinsang.workers.dev)
+[![Play](https://img.shields.io/badge/▶_플레이하기-jinsang--defense-5a8268?style=for-the-badge)](https://play.jinsang-defense.workers.dev)
 
 ![Cloudflare Workers](https://img.shields.io/badge/Cloudflare_Workers-F38020?logo=cloudflare&logoColor=white)
 ![Durable Objects](https://img.shields.io/badge/Durable_Objects-F38020?logo=cloudflare&logoColor=white)

@@ -1,5 +1,5 @@
 {
-  "name": "jinsang-defense",
+  "name": "play",
   "main": "src/worker/index.ts",
   "compatibility_date": "2025-09-01",
   // 화면 파일은 Vite 빌드 결과를 Cloudflare 플러그인이 알아서 연결한다.
