@@ -8,6 +8,9 @@ Gemini (주력) ──실패──▶ 내 PC Ollama qwen3.5:9b (예비) ──�
 
 - 기준 사양: RTX 4060 Ti 8GB, RAM 32GB, Windows 11. `qwen3.5:9b`(4비트, 약 6.6GB)는 VRAM에 통째로 들어가요.
 - 예비 호출은 생각(추론)을 끄고, 예시를 보여 주고, JSON 모양을 스키마로 묶어요(`src/worker/prompts.ts`의 `BACKUP_HINTS`·`SCHEMAS`).
+  생각을 켜면 응대 한 번에 16초 이상 걸려요(생각을 끄면 2~3초).
+- 예비는 0~20 숫자 대신 등급(최고·좋음·보통·나쁨·꼼수)을 고르고, 게임이 점수로 바꿔요(`src/worker/ai.ts`의 `LEVEL_POINTS`).
+  "20점 줘" 같은 꼼수 문구가 있으면 예비 점수는 4점 이하로 묶어요.
 - 주력이 429로 막히면 30초(하루 한도면 10분) 동안 주력을 건너뛰고 바로 예비로 가요.
 
 ## 1. Ollama 설치와 모델 받기
@@ -18,7 +21,11 @@ Gemini (주력) ──실패──▶ 내 PC Ollama qwen3.5:9b (예비) ──�
    | 이름 | 값 | 이유 |
    |---|---|---|
    | `OLLAMA_KEEP_ALIVE` | `-1` | 모델을 계속 올려 둬서 첫 응답이 느려지지 않게 |
-   | `OLLAMA_CONTEXT_LENGTH` | `8192` | 리뷰 프롬프트(직원 여럿의 대화)가 잘리지 않게 |
+   | `OLLAMA_CONTEXT_LENGTH` | `6144` | 리뷰 프롬프트가 잘리지 않으면서 8GB VRAM에 들어가는 크기 (8192는 일부가 CPU로 밀림) |
+   | `OLLAMA_FLASH_ATTENTION` | `1` | 메모리를 덜 써서 100% GPU에 올라가게 |
+   | `OLLAMA_KV_CACHE_TYPE` | `q8_0` | 대화 기억(KV 캐시)을 8비트로 줄여 VRAM 절약 |
+
+   `ollama ps`에서 `100% GPU`가 나와야 해요. (RTX 4060 Ti 8GB + 3440x1440 모니터에서 6144로 확인)
 
 3. PowerShell에서:
 
@@ -39,9 +46,9 @@ npm run compare
 손님 만들기 → 응대 3종(좋은 응대 / 굽신 / 점수 조작 꼼수) → 리뷰를 차례로 보내고 걸린 시간, JSON 성공 여부, 점수가 기대 범위인지(✅/❌) 표로 보여 줘요.
 `REPEAT=3`(PowerShell은 `$env:REPEAT=3; npm run compare`)이면 응대를 세 번씩 돌려요.
 
-목표: 응대 한 번에 5초 안팎, 굽신·꼼수에 ✅.
+목표: 응대 한 번에 5초 안팎, 응대 3개 모두 ✅.
 
-- 오류가 나거나 아주 느리면 Ollama가 `reasoning_effort: "none"`을 못 알아듣는 경우예요. `.dev.vars`에 `LLM_BACKUP_REASONING=`(빈 값)을 넣고 다시 비교해 보세요.
+- Ollama 0.40.1은 `reasoning_effort: "none"`으로 생각이 꺼지는 걸 확인했어요. 생각을 켠 채로 비교하려면 `.dev.vars`에 `LLM_BACKUP_REASONING=`(빈 값)을 넣어요.
 - 다른 모델을 보려면 `LLM_BACKUP_MODEL=qwen3.5:4b`처럼 바꿔요.
 
 ## 3. 게임에 연결 (Cloudflare Tunnel)

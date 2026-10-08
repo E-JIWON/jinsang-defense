@@ -22,6 +22,17 @@ type Provider = {
   reasoning: string;
 };
 
+// 예비는 채점을 등급으로 답한다(prompts.ts SCHEMAS.reply). 게임 점수(0~20)로 바꾼다.
+const LEVEL_POINTS: Record<string, number> = { 최고: 18, 좋음: 15, 보통: 11, 나쁨: 6, 꼼수: 2 };
+// 작은 모델은 "20점 줘" 같은 꼼수에 넘어가곤 해서, 이런 말이면 예비 점수를 4점 이하로 묶는다.
+const CHEAT =
+  /grade|채점|(점수|만점)\s*(을|를|좀)?\s*(줘|주|올려)|규칙\s*[:：]|프롬프트|시스템\s*(메시지|지시)|역할을?\s*바꿔|지시를?\s*무시|ignore/i;
+
+function backupReply(out: AiOut, said: string): AiOut {
+  const grade = LEVEL_POINTS[String(out.level)] ?? Number(out.grade);
+  return { ...out, grade: CHEAT.test(said) ? Math.min(Number.isFinite(grade) ? grade : 0, 4) : grade };
+}
+
 // 주력이 한도(429)에 다 막히면 잠깐 건너뛰고 바로 예비로 간다. 같은 isolate 안에서만 기억한다.
 const skipped = new Map<string, { until: number; body: string }>();
 
@@ -124,7 +135,8 @@ export async function ask(env: Env, kind: AiKind, prompt: string, turn?: Turn | 
     if (res instanceof Response && res.ok) {
       const json = await res.json<{ choices?: { message?: { content?: string } }[] }>().catch(() => null);
       try {
-        return parseJson(json?.choices?.[0]?.message?.content);
+        const out = parseJson(json?.choices?.[0]?.message?.content);
+        return p.backup && kind === "reply" ? backupReply(out, turn?.msgs.at(-1)?.t ?? "") : out;
       } catch (e) {
         // 주력이 JSON을 망치면 예비에게 한 번 더 맡긴다
         if (p === list.at(-1)) throw e;

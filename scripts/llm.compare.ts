@@ -15,7 +15,8 @@ if (existsSync(".dev.vars")) {
     if (m) vars[m[1]] = m[2].trim();
   }
 }
-const conf = (k: string, d = "") => process.env[k] || vars[k] || d;
+// 빈 값(예: LLM_BACKUP_REASONING=)도 그대로 쓴다. 없을 때만 기본값.
+const conf = (k: string, d = "") => process.env[k] ?? vars[k] ?? d;
 const REPEAT = Number(conf("REPEAT", "1")) || 1;
 
 type Target = { label: string; env: Env };
@@ -95,14 +96,15 @@ test("주력 vs 예비 비교", async () => {
 
     for (const line of LINES) {
       for (let i = 0; i < REPEAT; i++) {
-        const r = await timed(() => ask(env, "reply", replyPrompt(c, turnOf(c, line.t))));
+        const t = turnOf(c, line.t);
+        const r = await timed(() => ask(env, "reply", replyPrompt(c, t), t));
         const grade = Number(r.out?.grade);
         const ok = r.out && grade >= line.want[0] && grade <= line.want[1];
         rows.push({
           모델: label,
           단계: `응대: ${line.label}`,
           초: (r.ms / 1000).toFixed(1),
-          결과: r.err ?? `${grade}점 ${ok ? "✅" : `❌ (기대 ${line.want.join("~")})`}`,
+          결과: r.err ?? `${grade}점${r.out?.level ? `(${r.out.level})` : ""} ${ok ? "✅" : `❌ (기대 ${line.want.join("~")})`}`,
         });
         if (r.out && i === 0)
           console.log(`[${line.label}] 직원: ${line.t}\n  → ${grade}점 "${r.out.why}" / 손님: ${r.out.reply} (${r.out.act})`);
