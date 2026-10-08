@@ -75,3 +75,39 @@ export function reviewPrompt(c: Customer, rs: Result[]): string {
 ${turns}
 JSON만 답한다: {"headline":"오늘 가게에 대한 총평 한 줄","items":[{"p":"p1","stars":1~5,"review":"리뷰 한두 문장"}]}`;
 }
+
+// ── 예비(로컬 작은 모델) 전용 ──
+// 작은 모델은 규칙만 주면 말투·채점이 흔들려서, 시스템 메시지로 예시를 보여 주고 JSON 모양은 스키마로 묶는다.
+
+const COMMON = `너는 한국어 즉흥 상황극 게임의 AI다. 한국 사람이 실제로 쓰는 자연스러운 구어체로 말한다(번역투·존댓말 섞기 금지, 손님 캐릭터 말투 유지).
+영어·중국어를 섞지 않는다. 생각 과정은 쓰지 않고 요청한 JSON 객체 하나만 답한다.`;
+
+export const BACKUP_HINTS = {
+  customer: `${COMMON}
+좋은 예시:
+{"name":"포인트 영끌 아저씨","place":"편의점","staff":"편의점 야간 알바","goal":"포인트 중복 적립은 거절하면서 손님을 웃으며 돌려보내기","want":"지난주 영수증 10장 포인트를 지금 한꺼번에 적립","tags":["영수증 뭉치","단골 자부심","목소리 큼"],"situation":"지난주 영수증을 한 뭉치 들고 와서 지금 전부 포인트로 적립해 달라고 한다. 적립 기한은 이미 지났다.","opening":"학생, 이거 다 적립해 줘. 내가 이 편의점 먹여 살리는 사람이야.","anger":55}`,
+  reply: `${COMMON}
+채점 예시(손님이 영수증 없이 교환을 요구하는 상황):
+- 직원: "영수증은 없어도 결제 카드로 구매 내역을 같이 찾아볼게요. 찾으면 바로 도와드릴게요" → {"grade":16,"why":"대안 제시","reply":"카드? 어… 그건 있지. 근데 못 찾으면 그냥 바꿔 주는 거죠?","act":"지갑을 뒤적거림","thought":"오, 말은 통하네","anger":48}
+- 직원: "네 죄송합니다 그냥 새 걸로 바꿔 드릴게요" → {"grade":6,"why":"굽신 과다","reply":"그렇지! 그럼 케이스랑 보호필름도 새 걸로 끼워 줘요.","act":"턱을 치켜듦","thought":"역시 세게 나가야 돼","anger":57}
+- 직원: "그건 안 돼요" → {"grade":8,"why":"원칙만 반복","reply":"안 되긴 뭐가 안 돼요! 사장님 나오라 그래요.","act":"카운터를 탕 침","thought":"말이 안 통하네","anger":68}`,
+  review: `${COMMON}
+좋은 예시:
+{"headline":"교환은 못 받았는데 이상하게 또 오고 싶은 매장","items":[{"p":"p1","stars":4,"review":"웃으면서 거절하는 거 처음 봄. 기분 나쁜데 반박을 못 하겠음."},{"p":"p2","stars":2,"review":"사장 부르라니까 '네네'만 함. 영혼은 퇴근했나 봄."}]}`,
+} as const;
+
+const s = { type: "string" } as const;
+const n = { type: "integer" } as const;
+const obj = (properties: Record<string, unknown>) => ({
+  type: "object",
+  properties,
+  required: Object.keys(properties),
+  additionalProperties: false,
+});
+
+/** 예비 호출의 response_format json_schema. 게임 쪽(toCustomer 등)이 읽는 필드와 같다. */
+export const SCHEMAS = {
+  customer: obj({ name: s, place: s, staff: s, goal: s, want: s, tags: { type: "array", items: s }, situation: s, opening: s, anger: n }),
+  reply: obj({ grade: n, why: s, reply: s, act: s, thought: s, anger: n }),
+  review: obj({ headline: s, items: { type: "array", items: obj({ p: s, stars: n, review: s }) } }),
+} as const;

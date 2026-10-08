@@ -13,6 +13,7 @@
     "typecheck": "tsc -b",
     "test": "vitest run --project unit",
     "e2e": "vitest run --project e2e",
+    "compare": "vitest run --project compare --silent=false",
     "types": "wrangler types"
   },
   "devDependencies": {

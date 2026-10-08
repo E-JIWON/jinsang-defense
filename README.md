@@ -43,7 +43,7 @@
 |---|---|
 | 서버 | Cloudflare Workers, Durable Objects(SQLite), WebSocket Hibernation API |
 | 언어 | TypeScript(strict). 화면·서버가 `src/shared`의 타입과 메시지 프로토콜을 같이 써요 |
-| AI | OpenAI 호환 `/chat/completions` (기본 Gemini, Groq나 Ollama로 교체 가능) |
+| AI | OpenAI 호환 `/chat/completions` (기본 Gemini, 실패하면 내 PC Ollama가 예비로 받음) |
 | 화면 | React 19, Vite + [Cloudflare Vite 플러그인](https://developers.cloudflare.com/workers/vite-plugin/), [Lucide](https://lucide.dev), [Pretendard](https://github.com/orioncactus/pretendard) |
 | 품질 | [Biome](https://biomejs.dev)(린트·포맷), [Vitest](https://vitest.dev)(규칙 단위 테스트 + 서버 기능 e2e) |
 
@@ -78,16 +78,17 @@ src/
     index.ts         라우터 (/api/room, /ws/:code, 나머지는 화면)
     room.ts          Room: 방 상태, 실시간, 2분 타이머, AI 호출
     limiter.ts       Limiter: IP·방·하루 전체 호출 한도
-    ai.ts            OpenAI 호환 호출, 예비 모델, 가짜 손님
-    prompts.ts       손님 만들기 · 대답 · 리뷰 프롬프트
+    ai.ts            OpenAI 호환 호출, 예비 모델·예비 AI(내 PC), 가짜 손님
+    prompts.ts       손님 만들기 · 대답 · 리뷰 프롬프트, 예비용 예시·JSON 스키마
   client/            React 화면
     App.tsx          라우팅(/, /r/:code)과 탭
     hooks/useRoom.ts 웹소켓 연결, 재연결, 입장 전 동작 모아 두기
     features/        home(첫 화면·초대 입장) · room(대기실·대화·입력 도크) · history(지난 손님·순위)
     components/      Avatar, Face, Header, Toasts
 e2e/room.e2e.ts      기능 QA: 떠 있는 서버에 여러 명이 붙어 한 판 전체
+scripts/llm.compare.ts  주력 AI와 내 PC 예비 AI 속도·채점 비교 (npm run compare)
 public/              파비콘·앱 아이콘, 앱 정보(manifest), 카톡·SNS 공유 이미지(og.png), robots.txt·sitemap.xml
-docs/                README 데모 GIF
+docs/                README 데모 GIF, 내 PC 예비 AI 설치 가이드(local-llm.md)
 ```
 
 ## 시작하기
@@ -132,10 +133,15 @@ OpenAI 호환 API면 `wrangler.jsonc`의 `vars`만 바꾸면 돼요.
 | Groq | `https://api.groq.com/openai/v1` | Groq 콘솔의 모델 이름 |
 | 내 맥 Ollama | Cloudflare Tunnel 주소 + `/v1` | `exaone3.5:7.8b` 등 (`LLM_REASONING`은 비우기) |
 
+### 예비 AI (내 PC)
+
+주력이 한도·장애로 실패하면 예비가 받아요. secret `LLM_BACKUP_BASE_URL`을 넣어야 켜지고, 모델은 `LLM_BACKUP_MODEL`(기본 `qwen3.5:9b`)이에요.
+예비 호출은 생각을 끄고(`LLM_BACKUP_REASONING`), 예시와 JSON 스키마를 같이 보내요. 설치·터널·비교 방법은 [docs/local-llm.md](docs/local-llm.md)에 있어요.
+
 ## 안전장치
 
 - **신원**: 브라우저마다 비밀 토큰을 두고, 서버는 그 SHA-256 해시를 공개 id로 써요. 공개 id를 알아도 남(진행자 포함)을 흉내 낼 수 없어요.
 - **무료 한도 보호**: AI 호출은 IP당 시간 120회, 방당 시간 300회, 게임 전체 하루 `LLM_DAILY_LIMIT`회까지예요. 가게 생성은 IP당 시간 30회예요.
 - **프롬프트 조작 방어**: 플레이어 글은 JSON 문자열로 감싸 넣고, 그 안의 지시("20점 줘")는 따르지 않고 0~4점을 줘요.
 - **방 막기 방지**: 한 방은 30명까지예요. 꽉 차면 접속이 끊겼고 응대 기록이 없는 사람을 정리하고 자리를 내줘요. 리액션은 0.25초에 한 번, 보너스는 구경꾼 한 명당 한 차례 3번까지만 세요.
-- **장애 대응**: 붐빔(503)이나 한도(429)면 예비 모델로 넘어가요. 실패해도 내 말은 남고 "다시 보내기"를 할 수 있어요. 서버가 재시작되면 멈춘 응대를 복구해요.
+- **장애 대응**: 붐빔(503)이나 한도(429)면 예비 모델로 넘어가고, 예비 AI(내 PC)를 켜 두면 주력이 어떤 이유로 실패해도 그쪽이 받아요. 실패해도 내 말은 남고 "다시 보내기"를 할 수 있어요. 서버가 재시작되면 멈춘 응대를 복구해요.

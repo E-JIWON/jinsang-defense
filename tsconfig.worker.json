@@ -5,5 +5,5 @@
     "lib": ["es2023"],
     "types": ["./worker-configuration.d.ts", "node"]
   },
-  "include": ["src/worker", "src/shared"]
+  "include": ["src/worker", "src/shared", "scripts"]
 }

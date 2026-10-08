@@ -5,3 +5,6 @@ LLM_API_KEY=여기에_Gemini_API_키
 # 내 맥 Ollama로 돌릴 때는 아래 두 줄 주석을 풀고 키 줄은 지운다
 # LLM_BASE_URL=http://localhost:11434/v1
 # LLM_MODEL=exaone3.5:7.8b
+
+# 예비 AI: Gemini가 실패하면 내 PC Ollama가 받는다 (docs/local-llm.md)
+# LLM_BACKUP_BASE_URL=http://localhost:11434/v1
