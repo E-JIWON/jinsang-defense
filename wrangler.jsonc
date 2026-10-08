@@ -19,6 +19,10 @@
     "LLM_FALLBACK_MODELS": "gemini-3.5-flash,gemini-3.8-flash,gemini-flash-latest",
     // 생각(추론)은 조금만: low 2초 / none 2~3초 / 기본 8초. Ollama 등 지원 안 하는 곳이면 빈 문자열로
     "LLM_REASONING": "low",
+    // 예비 AI: 주력이 한도·장애로 실패하면 내 PC Ollama가 받는다. 주소는 secret LLM_BACKUP_BASE_URL로 넣어야 켜진다
+    "LLM_BACKUP_MODEL": "qwen3.5:9b",
+    // 예비는 생각을 끈다(작은 모델이 생각하면 5초를 넘긴다). Ollama가 못 알아들으면 빈 문자열로
+    "LLM_BACKUP_REASONING": "none",
     // 게임 전체 하루 AI 호출 상한 (무료 한도 보호)
     "LLM_DAILY_LIMIT": "1000"
   }
