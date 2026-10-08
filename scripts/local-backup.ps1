@@ -86,11 +86,18 @@ for ($i = 0; $i -lt 40 -and -not $url; $i++) {
 if (-not $url) { throw "터널 주소를 못 받았어요. 로그: $log" }
 Write-Host "터널: $url"
 
-# 터널로 모델 목록이 보이는지
-try {
-  $ids = (Invoke-RestMethod -Uri "$url/v1/models" -TimeoutSec 30).data.id
-  Write-Host "터널 경유 모델: $($ids -join ', ')"
-} catch { Write-Host "터널 경유 확인 실패: $($_.Exception.Message)" }
+# 터널로 모델 목록이 보이는지 (새 주소는 DNS에 퍼지는 데 몇 초 걸려서 몇 번 다시 해 본다.
+# 한 번 "없는 주소"로 기억되면 윈도우가 한동안 그렇게 답해서 DNS 캐시를 비운다. 게임(Cloudflare)은 영향 없다)
+Clear-DnsClientCache -ErrorAction SilentlyContinue
+$ok = $false
+for ($i = 0; $i -lt 8 -and -not $ok; $i++) {
+  try {
+    $ids = (Invoke-RestMethod -Uri "$url/v1/models" -TimeoutSec 30).data.id
+    Write-Host "터널 경유 모델: $($ids -join ', ')"
+    $ok = $true
+  } catch { Start-Sleep 4 }
+}
+if (-not $ok) { Write-Host "터널 경유 확인 실패(주소는 받았으니 잠시 뒤 다시 열릴 수 있어요)" }
 
 # 3) secret
 Write-Host "게임 secret(LLM_BACKUP_BASE_URL)에 넣는 중..."
