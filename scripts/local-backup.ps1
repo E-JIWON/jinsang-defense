@@ -1,4 +1,4 @@
-# 내 PC를 예비 AI로 켜는 스크립트 (docs/local-llm.md)
+﻿# 내 PC를 예비 AI로 켜는 스크립트 (docs/local-llm.md)
 #   1) Ollama 서버가 안 떠 있으면 띄우고
 #   2) Cloudflare 빠른 터널을 열어 공개 주소를 받고
 #   3) 그 주소를 게임(Cloudflare Workers)의 secret LLM_BACKUP_BASE_URL에 넣는다
@@ -23,7 +23,7 @@ $log = Join-Path $env:TEMP "cloudflared-tunnel.log"
 
 if ($InstallStartup) {
   $startup = [Environment]::GetFolderPath("Startup")
-  $lnk = Join-Path $startup "진상손님 예비AI.lnk"
+  $lnk = Join-Path $startup "jinsang-backup-ai.lnk"
   $sh = New-Object -ComObject WScript.Shell
   $s = $sh.CreateShortcut($lnk)
   $s.TargetPath = "powershell.exe"
