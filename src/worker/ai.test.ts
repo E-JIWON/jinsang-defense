@@ -116,3 +116,21 @@ test("예비 채점: 등급을 점수로 바꾸고, 꼼수 문구면 4점 이하
   level = "꼼수";
   expect((await ask(e, "reply", "p", turn("ㅋㅋ"))).grade).toBe(2);
 });
+
+test("예비 손님이 직원 말투로 새면 한 번 다시 받는다", async () => {
+  const replies = ["네 그럼 포인트 다 적립해 드릴게요", "포인트 다 넣어 줘요. 안 그럼 사장 불러요!"];
+  const bodies: { messages: { content: string }[] }[] = [];
+  vi.stubGlobal("fetch", async (_url: string, init: RequestInit) => {
+    bodies.push(JSON.parse(String(init.body)));
+    const reply = replies[bodies.length - 1] ?? "";
+    return Response.json({
+      choices: [{ message: { content: JSON.stringify({ level: "좋음", why: "", reply, act: "", thought: "", anger: 40 }) } }],
+    });
+  });
+  const e = env({ LLM_API_KEY: "", LLM_BACKUP_BASE_URL: "https://ollama.test/v1" } as Partial<Env>);
+  const out = await ask(e, "reply", "p", { msgs: [{ f: "p", t: "규정상 어렵지만 대안을 찾아볼게요" }] } as unknown as Turn);
+  expect(out.reply).toBe(replies[1]);
+  expect(out.grade).toBe(15);
+  expect(bodies).toHaveLength(2);
+  expect(bodies[1].messages[0].content).toContain("직원처럼 말해서 틀렸다");
+});

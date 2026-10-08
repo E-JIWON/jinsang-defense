@@ -28,6 +28,11 @@ const LEVEL_POINTS: Record<string, number> = { 최고: 18, 좋음: 15, 보통: 1
 const CHEAT =
   /grade|채점|(점수|만점)\s*(을|를|좀)?\s*(줘|주|올려)|규칙\s*[:：]|프롬프트|시스템\s*(메시지|지시)|역할을?\s*바꿔|지시를?\s*무시|ignore/i;
 
+// 작은 모델은 가끔 손님이 아니라 직원처럼 말한다("해 드릴게요"). 그러면 한 번 다시 시킨다.
+const ROLE_SLIP = /드릴게요|드릴까요|드려요|드립니다|해드릴|도와드|고객님/;
+const ROLE_NOTE =
+  "방금 답은 손님이 직원처럼 말해서 틀렸다. reply는 손님(너)이 직원에게 요구·불평하는 말이다. '드릴게요', '고객님' 같은 직원 말투는 쓰지 않는다.";
+
 function backupReply(out: AiOut, said: string): AiOut {
   const grade = LEVEL_POINTS[String(out.level)] ?? Number(out.grade);
   return { ...out, grade: CHEAT.test(said) ? Math.min(Number.isFinite(grade) ? grade : 0, 4) : grade };
@@ -63,7 +68,7 @@ function providers(env: Env): Provider[] {
   return list;
 }
 
-function requestBody(p: Provider, model: string, kind: AiKind, prompt: string) {
+function requestBody(p: Provider, model: string, kind: AiKind, prompt: string, note = "") {
   const reasoning = p.reasoning ? { reasoning_effort: p.reasoning } : {};
   if (!p.backup) {
     return {
@@ -78,7 +83,7 @@ function requestBody(p: Provider, model: string, kind: AiKind, prompt: string) {
   return {
     model,
     messages: [
-      { role: "system", content: BACKUP_HINTS[kind] },
+      { role: "system", content: note ? `${BACKUP_HINTS[kind]}\n${note}` : BACKUP_HINTS[kind] },
       { role: "user", content: prompt },
     ],
     response_format: { type: "json_schema", json_schema: { name: kind, strict: true, schema: SCHEMAS[kind] } },
@@ -88,7 +93,7 @@ function requestBody(p: Provider, model: string, kind: AiKind, prompt: string) {
 }
 
 /** 한 공급자의 모델들을 차례로 시도한다. 분당 한도(429)·붐빔(503)·시간초과면 다음 모델로. */
-async function tryProvider(p: Provider, kind: AiKind, prompt: string, deadline: number, passes: number) {
+async function tryProvider(p: Provider, kind: AiKind, prompt: string, deadline: number, passes: number, note = "") {
   let res: Response | Failed = { ok: false, status: 504 };
   let body = "";
   const attemptMs = p.backup ? BACKUP_MS : ATTEMPT_MS;
@@ -100,7 +105,7 @@ async function tryProvider(p: Provider, kind: AiKind, prompt: string, deadline: 
       res = await fetch(`${p.base.replace(/\/$/, "")}/chat/completions`, {
         method: "POST",
         headers: { "content-type": "application/json", ...p.headers },
-        body: JSON.stringify(requestBody(p, model, kind, prompt)),
+        body: JSON.stringify(requestBody(p, model, kind, prompt, note)),
         signal: AbortSignal.timeout(Math.min(attemptMs, left)),
       }).catch((e: Error): Failed => ({ ok: false, status: e.name === "TimeoutError" ? 504 : 502 }));
       if (!RETRYABLE.has(res.status)) break attempts;
@@ -108,6 +113,20 @@ async function tryProvider(p: Provider, kind: AiKind, prompt: string, deadline: 
     }
   }
   return { res, body };
+}
+
+async function readOut(res: Response): Promise<AiOut> {
+  const json = await res.json<{ choices?: { message?: { content?: string } }[] }>().catch(() => null);
+  return parseJson(json?.choices?.[0]?.message?.content);
+}
+
+/** 예비의 손님 대답: 직원 말투로 새면 한 번 다시 받고, 등급을 점수로 바꾼다. */
+async function backupAnswer(p: Provider, prompt: string, deadline: number, out: AiOut, said: string): Promise<AiOut> {
+  if (ROLE_SLIP.test(String(out.reply ?? "")) && deadline - Date.now() > 3000) {
+    const again = await tryProvider(p, "reply", prompt, deadline, 1, ROLE_NOTE);
+    if (again.res instanceof Response && again.res.ok) out = await readOut(again.res).catch(() => out);
+  }
+  return backupReply(out, said);
 }
 
 /**
@@ -133,15 +152,15 @@ export async function ask(env: Env, kind: AiKind, prompt: string, turn?: Turn | 
     const deadline = Date.now() + (p.backup ? BACKUP_MS : hasBackup ? MAIN_WITH_BACKUP_MS : DEADLINE_MS);
     const { res, body } = await tryProvider(p, kind, prompt, deadline, p.backup || hasBackup ? 1 : 2);
     if (res instanceof Response && res.ok) {
-      const json = await res.json<{ choices?: { message?: { content?: string } }[] }>().catch(() => null);
+      let out: AiOut;
       try {
-        const out = parseJson(json?.choices?.[0]?.message?.content);
-        return p.backup && kind === "reply" ? backupReply(out, turn?.msgs.at(-1)?.t ?? "") : out;
+        out = await readOut(res);
       } catch (e) {
         // 주력이 JSON을 망치면 예비에게 한 번 더 맡긴다
         if (p === list.at(-1)) throw e;
         continue;
       }
+      return p.backup && kind === "reply" ? backupAnswer(p, prompt, deadline, out, turn?.msgs.at(-1)?.t ?? "") : out;
     }
     if (!p.backup && hasBackup && res.status === 429)
       skipped.set(p.base, { until: Date.now() + (/PerDay/i.test(body) ? 600_000 : 30_000), body });
