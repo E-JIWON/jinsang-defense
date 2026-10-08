@@ -1350,3 +1350,20 @@ button.li:hover {
     transition: none !important;
   }
 }
+
+/* 기다리는 자리에 붙는 경과 초. 오래 걸리면 색으로 알린다 */
+.elapsed {
+  font: 600 12px var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-4);
+  white-space: nowrap;
+}
+.elapsed.slow {
+  color: var(--ink-2);
+}
+.elapsed.stuck {
+  color: var(--danger);
+}
+.mc > .elapsed {
+  align-self: center;
+}

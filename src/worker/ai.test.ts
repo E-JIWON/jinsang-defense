@@ -134,3 +134,62 @@ test("예비 손님이 직원 말투로 새면 한 번 다시 받는다", async 
   expect(bodies).toHaveLength(2);
   expect(bodies[1].messages[0].content).toContain("직원처럼 말해서 틀렸다");
 });
+
+/** 주력은 응답이 없고(끊길 때까지 기다림), 예비는 바로 답하는 fetch. 주력 요청이 끊긴 시각을 모은다. */
+function hangingMain() {
+  const calls: { model: string; ms: number }[] = [];
+  vi.stubGlobal("fetch", (url: string, init: RequestInit) => {
+    const body = JSON.parse(String(init.body));
+    if (url.includes("ollama")) {
+      calls.push({ model: body.model, ms: 0 });
+      return Promise.resolve(Response.json({ choices: [{ message: { content: '{"grade":12}' } }] }));
+    }
+    const t0 = Date.now();
+    return new Promise((_resolve, reject) => {
+      (init.signal as AbortSignal).addEventListener("abort", () => {
+        calls.push({ model: body.model, ms: Date.now() - t0 });
+        reject(Object.assign(new Error("timeout"), { name: "TimeoutError" }));
+      });
+    });
+  });
+  return calls;
+}
+
+// 실제 시간으로 잰다(AbortSignal.timeout은 가짜 타이머로 안 잡힌다). 8초 남짓 걸리는 게 정상이다.
+test("예비가 있으면 주력은 모델당 5초·전체 8초만 기다리고 넘긴다", { timeout: 15_000 }, async () => {
+  const calls = hangingMain();
+  const t0 = Date.now();
+  const out = await ask(env({ LLM_BACKUP_BASE_URL: "https://ollama.test/v1" }), "reply", "p");
+  const total = Date.now() - t0;
+  expect(out.grade).toBe(12);
+  expect(calls.map((c) => c.model)).toEqual(["gemini-a", "gemini-b", "qwen3.5:9b"]);
+  expect(calls[0].ms).toBeLessThanOrEqual(5_300);
+  expect(total).toBeLessThanOrEqual(9_000);
+});
+
+test("시간 초과한 주력은 다음 턴엔 기다리지 않고 바로 예비로 간다", async () => {
+  const calls: string[] = [];
+  vi.stubGlobal("fetch", async (url: string, init: RequestInit) => {
+    calls.push(JSON.parse(String(init.body)).model);
+    if (url.includes("ollama")) return Response.json({ choices: [{ message: { content: '{"grade":12}' } }] });
+    throw Object.assign(new Error("timeout"), { name: "TimeoutError" });
+  });
+  const e = env({ LLM_BACKUP_BASE_URL: "https://ollama.test/v1" });
+  await ask(e, "reply", "p");
+  expect(calls).toEqual(["gemini-a", "gemini-b", "qwen3.5:9b"]);
+  await ask(e, "reply", "p");
+  expect(calls.slice(3)).toEqual(["qwen3.5:9b"]);
+});
+
+test("예비 채점: 거절·조건 없이 다 들어주는 굽신이면 9점 이하로 묶는다", async () => {
+  vi.stubGlobal("fetch", async () =>
+    Response.json({
+      choices: [{ message: { content: JSON.stringify({ level: "최고", why: "", reply: "흠", act: "", thought: "", anger: 40 }) } }],
+    }),
+  );
+  const e = env({ LLM_API_KEY: "", LLM_BACKUP_BASE_URL: "https://ollama.test/v1" } as Partial<Env>);
+  const turn = (t: string) => ({ msgs: [{ f: "p", t }] }) as unknown as Turn;
+  expect((await ask(e, "reply", "p", turn("네네 죄송합니다 손님 말씀대로 다 해드릴게요"))).grade).toBe(9);
+  // 조건이 붙은 "다 해드릴게요"는 굽신이 아니다
+  expect((await ask(e, "reply", "p", turn("규정 안에서는 다 해드릴게요. 대신 영수증은 꼭 필요해요"))).grade).toBe(18);
+});

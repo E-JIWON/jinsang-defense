@@ -68,7 +68,7 @@ export function PlayView({ c, idea, setIdea }: Props) {
                 <b>{nameOf(live.player)}</b>응대 중
               </div>
               <Messages msgs={live.msgs} liveKey={`${g.round}:${live.player}`} />
-              {live.thinking && <Typing anger={live.anger} />}
+              {live.thinking && <Typing anger={live.anger} elapsed />}
               {live.lastError && <p className="pill danger">{live.lastError}</p>}
             </>
           )}
@@ -77,7 +77,7 @@ export function PlayView({ c, idea, setIdea }: Props) {
           {g.phase === "reviewing" && (
             <>
               <div className="pill">손님이 리뷰를 쓰는 중…</div>
-              <Typing anger={anger} />
+              <Typing anger={anger} elapsed />
             </>
           )}
           {floaties.map((f) => (
