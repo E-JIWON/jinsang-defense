@@ -74,6 +74,27 @@ npm run compare
 모델 이름(`LLM_BACKUP_MODEL`)과 생각 끄기(`LLM_BACKUP_REASONING`)는 `wrangler.jsonc`의 `vars`에 있어요.
 예비를 끄려면 `npx wrangler secret delete LLM_BACKUP_BASE_URL`.
 
+### 매일 켜기는 스크립트 한 번으로
+
+위 1~3번(Ollama 켜기 → 모델 미리 올리기 → 터널 열기 → 바뀐 주소를 secret에 넣기)을 `scripts/local-backup.ps1`이 한 번에 해요.
+
+```powershell
+npx wrangler login                                                  # 처음 한 번, 브라우저에서 허용
+powershell -ExecutionPolicy Bypass -File scripts\local-backup.ps1   # 창이 열리고 "완료"가 뜨면 끝. 창은 닫지 않기
+```
+
+PC를 켤 때마다 자동으로 돌리려면 시작프로그램에 등록해요(지우려면 `shell:startup` 폴더에서 바로 가기 삭제):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\local-backup.ps1 -InstallStartup
+```
+
+PowerShell에서 `npx`가 "스크립트를 실행할 수 없다"고 하면 `npx.cmd`로 쓰면 돼요.
+
+### 기다리는 시간은 이렇게 정해져요
+
+예비가 있으면 주력(Gemini)은 모델당 5초, 전체 8초만 기다리고 넘겨요(`src/worker/ai.ts`). 한 번 막힌 주력은 30초(하루 한도면 10분) 동안 건너뛰어서, 그다음 턴부터는 바로 내 PC가 받아요. 화면에는 기다린 초가 보여요(12초 넘으면 "예비 AI로 넘어가는 중일 수 있어요").
+
 ### 주의: 빠른 터널은 주소가 바뀌고, 주소를 아는 누구나 쓸 수 있어요
 
 - `trycloudflare.com` 주소는 cloudflared를 다시 켤 때마다 바뀌어요. 바뀌면 3번을 다시 해요.
