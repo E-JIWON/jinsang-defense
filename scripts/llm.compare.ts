@@ -104,7 +104,9 @@ test("주력 vs 예비 비교", async () => {
           모델: label,
           단계: `응대: ${line.label}`,
           초: (r.ms / 1000).toFixed(1),
-          결과: r.err ?? `${grade}점${r.out?.level ? `(${r.out.level})` : ""} ${ok ? "✅" : `❌ (기대 ${line.want.join("~")})`}`,
+          결과:
+            r.err ??
+            `${grade}점${r.out?.level ? `(${r.out.level}${r.out.level !== "꼼수" && grade <= 4 ? "→꼼수 차단" : ""})` : ""} ${ok ? "✅" : `❌ (기대 ${line.want.join("~")})`}`,
         });
         if (r.out && i === 0)
           console.log(`[${line.label}] 직원: ${line.t}\n  → ${grade}점 "${r.out.why}" / 손님: ${r.out.reply} (${r.out.act})`);
