@@ -1,5 +1,4 @@
 import { TURN_MS } from "../../../shared/game";
-import { Elapsed } from "../../components/Elapsed";
 import { Typing } from "../../components/Typing";
 import { formatClock } from "../../lib/format";
 import { ErrorLine } from "./Notices";
@@ -20,9 +19,7 @@ export function Arriving({ idea }: { idea: string }) {
               <div className="meter">
                 <i className="skelbar" style={{ width: "100%" }} />
               </div>
-              <span className="cb-sub">
-                보통 3~10초 걸려요 · <Elapsed />
-              </span>
+              <span className="cb-sub">보통 3~10초 걸려요</span>
             </div>
             <span className="clock idle">{formatClock(TURN_MS)}</span>
           </div>
