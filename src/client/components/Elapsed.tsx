@@ -11,7 +11,7 @@ export function useElapsed(): number {
   return sec;
 }
 
-// 보통은 2~5초, Gemini가 막혀 내 PC(예비)로 넘어가면 10초 안팎. 그보다 길면 뭔가 걸린 것이다.
+// 보통은 2~8초. 그보다 길면 AI 쪽이 붐비거나 한도에 걸려 다른 모델로 넘어가는 중이다.
 const SLOW_SEC = 12;
 const STUCK_SEC = 25;
 
@@ -24,7 +24,7 @@ export function Elapsed({ note = true }: { note?: boolean }) {
   const cls = sec >= STUCK_SEC ? "elapsed stuck" : sec >= SLOW_SEC ? "elapsed slow" : "elapsed";
   return (
     <span className={cls} aria-live="polite">
-      {sec}초째{note && sec >= STUCK_SEC ? " · 많이 느리네요" : note && sec >= SLOW_SEC ? " · 예비 AI로 넘어가는 중일 수 있어요" : ""}
+      {sec}초째{note && sec >= STUCK_SEC ? " · 많이 느리네요" : note && sec >= SLOW_SEC ? " · 조금 걸리네요" : ""}
     </span>
   );
 }
