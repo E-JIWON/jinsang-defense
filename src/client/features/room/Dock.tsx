@@ -1,6 +1,7 @@
 import { ArrowUp } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { REACTS } from "../../../shared/game";
+import { Elapsed } from "../../components/Elapsed";
 import { stickBottom } from "../../lib/scroll";
 import { ErrorLine, HostAway } from "./Notices";
 import { useGame } from "./RoomContext";
@@ -49,7 +50,15 @@ function Composer() {
         </button>
       </form>
       <Hint>
-        <span>{thinking ? "손님이 생각하는 중 · 시계 멈춤" : "Enter로 보내기 · 생각하는 동안 시계 멈춤"}</span>
+        <span>
+          {thinking ? (
+            <>
+              손님이 생각하는 중 · 시계 멈춤 · <Elapsed note={false} />
+            </>
+          ) : (
+            "Enter로 보내기 · 생각하는 동안 시계 멈춤"
+          )}
+        </span>
         <button type="button" className="btn ghost" onClick={() => act({ type: "endTurn" })}>
           그만하기
         </button>
@@ -121,7 +130,9 @@ function DockBody({ idea, setIdea }: { idea: string; setIdea: (v: string) => voi
   if (g.phase === "reviewing") {
     return (
       <Hint>
-        <span>손님이 별점을 고르는 중이에요</span>
+        <span>
+          손님이 별점을 고르는 중이에요 · <Elapsed note={false} />
+        </span>
         {isHost && (
           <button type="button" className="btn ghost" onClick={() => act({ type: "review" })}>
             너무 오래 걸리면 다시 시도
